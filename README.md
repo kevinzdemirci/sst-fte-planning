@@ -5,7 +5,7 @@
 > **"Better Education, Better Future"**  
 > *A Texas charter school network with 21 campuses across San Antonio, Houston, and Corpus Christi.*
 
-[![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-Live%20Demo-crimson?style=for-the-badge&logo=github)](https://nyisztor.github.io/sst-fte-planning/)
+[![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-Live%20Demo-crimson?style=for-the-badge&logo=github)](https://kevinzdemirci.github.io/sst-fte-planning/)
 [![Platform](https://img.shields.io/badge/Platform-Google%20Workspace-navy?style=for-the-badge&logo=google)](SETUP_GUIDE.md)
 [![Audit](https://img.shields.io/badge/Audit-Tamper--Proof%20Logged-green?style=for-the-badge)](SETUP_GUIDE.md)
 
@@ -13,7 +13,7 @@
 
 ## 🌐 Live Web Application
 
-- **Live GitHub Pages Link**: [https://nyisztor.github.io/sst-fte-planning/](https://nyisztor.github.io/sst-fte-planning/)
+- **Live GitHub Pages Link**: [https://kevinzdemirci.github.io/sst-fte-planning/](https://kevinzdemirci.github.io/sst-fte-planning/)
 - **Local Browser App**: Simply open [`index.html`](index.html) or [`fte_planning_app.html`](fte_planning_app.html) directly in any web browser.
 
 ---
@@ -65,11 +65,8 @@ This portal replaces spreadsheet-only FTE (full-time-equivalent) staffing tracki
 ## 🚀 Deployment Instructions
 
 ### A. GitHub Pages Deployment
-1. Push this repository to GitHub under your account (e.g. `sst-fte-planning`).
-2. Go to repository **Settings > Pages**.
-3. Under **Build and deployment > Source**, select **Deploy from a branch**.
-4. Set branch to `main` and folder to `/(root)`, then click **Save**.
-5. Your live app is immediately accessible at `https://nyisztor.github.io/sst-fte-planning/`.
+1. Repository is live on GitHub: `https://github.com/kevinzdemirci/sst-fte-planning`
+2. Your live app is accessible at `https://kevinzdemirci.github.io/sst-fte-planning/`.
 
 ### B. Google Workspace / Apps Script Deployment
 Follow the plain-language guide in [**`SETUP_GUIDE.md`**](SETUP_GUIDE.md) to upload `SST_FTE_Planning_Database.xlsx` to Google Drive and deploy the code in `apps_script/` inside your organization.
