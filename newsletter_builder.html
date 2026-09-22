@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SST Public Schools - Executive Newsletter Builder & Generator</title>
+  <!-- Tailwind CSS CDN for the Builder UI -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+    .preview-frame {
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen">
+
+  <!-- TOP APP HEADER -->
+  <header class="bg-slate-900 text-white sticky top-0 z-50 border-b border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-lg text-white shadow-md">
+          SST
+        </div>
+        <div>
+          <h1 class="font-bold text-base leading-tight">Executive Newsletter Generator</h1>
+          <p class="text-xs text-slate-400">School of Science and Technology &bull; Executive Briefing</p>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-3">
+        <button id="btnCopyRich" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-semibold flex items-center space-x-2 shadow-sm transition">
+          <i class="fa-solid fa-paste"></i>
+          <span>Copy for Gmail / ParentSquare</span>
+        </button>
+        <button id="btnCopyHtml" class="px-3.5 py-2 bg-blue-700 hover:bg-blue-600 text-white rounded-lg text-sm font-semibold flex items-center space-x-2 shadow-sm transition">
+          <i class="fa-solid fa-code"></i>
+          <span>Copy HTML</span>
+        </button>
+        <button id="btnDownload" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white rounded-lg text-sm font-medium flex items-center space-x-2 transition">
+          <i class="fa-solid fa-download"></i>
+          <span>Download .html</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN SPLIT WORKSPACE -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
+    
+    <!-- LEFT PANEL: FORM EDITOR (5 COLS) -->
+    <div class="lg:col-span-5 space-y-6">
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+        <h2 class="text-lg font-bold text-slate-900 mb-1 flex items-center">
+          <i class="fa-solid fa-sliders text-blue-600 mr-2"></i> Newsletter Content Editor
+        </h2>
+        <p class="text-xs text-slate-500 mb-5">Fill in the fields below. The preview updates instantly.</p>
+
+        <!-- 1. Header Information -->
+        <div class="space-y-4 border-b border-slate-100 pb-5">
+          <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">1. Header &amp; Metadata</h3>
+          
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Issue Date</label>
+            <input type="text" id="inputDate" value="August 26, 2026" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Main Title</label>
+            <input type="text" id="inputTitle" value="Superintendent's Weekly Executive Briefing" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Subtitle / Meeting Note</label>
+            <input type="text" id="inputSubtitle" value="Recap of Executive Meeting Decisions, Operational Directives & Campus Deadlines" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <!-- 2. Executive Highlights -->
+        <div class="space-y-3 border-b border-slate-100 py-5">
+          <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">2. Highlights at a Glance (Bullets)</h3>
+          <p class="text-xs text-slate-400">Enter one highlight per line:</p>
+          <textarea id="inputHighlights" rows="4" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono text-xs">Domain 3 TELPAS: Closing the Gaps dashboard deep-dive analysis underway; leadership session scheduled.
+T-PESS / T-TESS: Appraiser certification rollout announced for Principals & REDs; walkthrough deadlines approaching.
+Operations & Talent: Exploring Teacher Aide FTE for substitute coverage; standardized email signatures.
+Milestone Celebration: 4 SST campuses surpassed the 800+ student enrollment mark!</textarea>
+        </div>
+
+        <!-- 3. Immediate Action Items -->
+        <div class="space-y-4 border-b border-slate-100 py-5">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">3. Immediate Action Items</h3>
+            <button id="btnAddAction" class="text-xs text-blue-600 font-semibold hover:text-blue-800 flex items-center">
+              <i class="fa-solid fa-plus mr-1"></i> Add Item
+            </button>
+          </div>
+          <div id="actionItemsContainer" class="space-y-3">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- 4. Section News / Articles -->
+        <div class="space-y-4 border-b border-slate-100 py-5">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">4. News &amp; Policy Articles</h3>
+            <button id="btnAddArticle" class="text-xs text-blue-600 font-semibold hover:text-blue-800 flex items-center">
+              <i class="fa-solid fa-plus mr-1"></i> Add Article
+            </button>
+          </div>
+          <div id="articlesContainer" class="space-y-4">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- 5. Upcoming Key Dates -->
+        <div class="space-y-4 border-b border-slate-100 py-5">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">5. Mark Your Calendar (Dates)</h3>
+            <button id="btnAddDate" class="text-xs text-blue-600 font-semibold hover:text-blue-800 flex items-center">
+              <i class="fa-solid fa-plus mr-1"></i> Add Date
+            </button>
+          </div>
+          <div id="datesContainer" class="grid grid-cols-2 gap-2">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- 6. Contacts & Resources -->
+        <div class="space-y-4 pt-5">
+          <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">6. Contact Info &amp; Drive Link</h3>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Superintendent's Google Drive Link</label>
+            <input type="text" id="inputDriveLink" value="https://drive.google.com" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL: LIVE PREVIEW & CONTROLS (7 COLS) -->
+    <div class="lg:col-span-7">
+      <div class="sticky top-20 space-y-4">
+        
+        <!-- Preview Switcher Bar -->
+        <div class="flex items-center justify-between bg-white px-4 py-3 rounded-xl border border-slate-200 shadow-sm">
+          <div class="flex items-center space-x-2">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-500 mr-2">Preview Mode:</span>
+            <button id="btnViewDesktop" class="px-3 py-1.5 bg-blue-50 text-blue-700 font-semibold text-xs rounded-lg border border-blue-200 flex items-center space-x-1">
+              <i class="fa-solid fa-desktop"></i>
+              <span>Desktop (680px)</span>
+            </button>
+            <button id="btnViewMobile" class="px-3 py-1.5 bg-white text-slate-600 font-semibold text-xs rounded-lg border border-slate-200 hover:bg-slate-50 flex items-center space-x-1">
+              <i class="fa-solid fa-mobile-screen"></i>
+              <span>Mobile (380px)</span>
+            </button>
+          </div>
+          <div id="copyAlert" class="text-xs font-bold text-emerald-600 hidden flex items-center">
+            <i class="fa-solid fa-circle-check mr-1"></i> Copied to clipboard!
+          </div>
+        </div>
+
+        <!-- Newsletter Render Container -->
+        <div id="previewWrapper" class="bg-slate-200/80 p-4 rounded-xl border border-slate-300 flex justify-center overflow-auto max-h-[82vh]">
+          <div id="previewContainer" class="preview-frame bg-white rounded-xl overflow-hidden w-full max-w-[680px] transition-all duration-300">
+            <!-- Newsletter HTML will be injected here -->
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <!-- JAVASCRIPT STATE & RENDER LOGIC -->
+  <script>
+    // State Store
+    const state = {
+      date: "August 26, 2026",
+      title: "Superintendent's Weekly Executive Briefing",
+      subtitle: "Recap of Executive Meeting Decisions, Operational Directives & Campus Deadlines",
+      highlights: [
+        "Domain 3 TELPAS: Closing the Gaps dashboard deep-dive analysis underway; leadership session scheduled.",
+        "T-PESS / T-TESS: Appraiser certification rollout announced for Principals & REDs; walkthrough deadlines approaching.",
+        "Operations & Talent: Exploring Teacher Aide FTE for substitute coverage; standardized email signatures.",
+        "Milestone Celebration: 4 SST campuses surpassed the 800+ student enrollment mark!"
+      ],
+      actionItems: [
+        {
+          title: "Register for T-PESS Appraiser Certification",
+          desc: "All Principals and Regional Executive Directors (REDs) must register for in-person or online certification.",
+          owner: "REDs & Principals",
+          due: "Earliest Fall Session"
+        },
+        {
+          title: "Implement Academic Improvement Plans (ESF Self-Assessment)",
+          desc: "Identified campuses must build an ESF-aligned improvement plan in collaboration with Regional Directors of Academics.",
+          owner: "Principals & RDAs",
+          due: "Sept 10, 2026"
+        },
+        {
+          title: "T-TESS Phase 1 Walkthrough Form in DMAC",
+          desc: "Complete at least one Phase 1 Walkthrough form in DMAC for every teacher.",
+          owner: "Campus Leadership",
+          due: "Sept 4, 2026"
+        },
+        {
+          title: "Standardize Campus & Staff Email Signatures",
+          desc: "Remove character quotes and replace with district/campus values; ensure correct Assistant Principal titles are applied.",
+          owner: "All Staff",
+          due: "Immediate"
+        }
+      ],
+      articles: [
+        {
+          tag: "Academics & Accountability",
+          tagColor: "blue",
+          title: "Domain 3 — TELPAS Impact & Campus Improvement Plans",
+          content: "The Executive Committee reviewed the district-created Domain 3: Closing the Gaps dashboard and analyzed preliminary findings. Certain campuses scored 0/4 on the TELPAS (English Language Proficiency) component, requiring targeted intervention support.<br><br>• <strong>Leadership Support Series:</strong> Wednesday, Aug 26 (9:00 AM – 10:00 AM) to review dashboards.<br>• <strong>ESF Self-Assessment:</strong> Identified campuses will draft customized improvement plans supported by the Regional Director of Academics by <strong>Thursday, September 10, 2026</strong>.",
+          buttonText: "View TELPAS Deep Dive",
+          buttonLink: "#"
+        },
+        {
+          tag: "Leadership & Appraisals",
+          tagColor: "amber",
+          title: "T-PESS Appraiser Certification — Fall Rollout",
+          content: "T-PESS certification is required for anyone conducting formal principal or assistant principal evaluations under our Enhanced TIA framework. REDs will evaluate Principals, and Principals will evaluate Assistant Principals.<br><br><strong>In-Person (ESC Region 20):</strong> Sept 24 (#117104) & Oct 22 (#117106)<br><strong>Online Options:</strong> ESC 4 (Oct 28) & ESC 13 (Jan 28)",
+          buttonText: "Download T-TESS Calendar (.docx)",
+          buttonLink: "#"
+        },
+        {
+          tag: "Operations & Policies",
+          tagColor: "slate",
+          title: "Staffing, Title Alignment & Email Guidelines",
+          content: "• <strong>Teacher Aide FTE:</strong> Hiring teacher aides to fill daily substitute needs.<br>• <strong>Title Alignment:</strong> We are transitioning from 'Dean' to official 'Assistant Principal' titles (e.g., Assistant Principal of Academics, Assistant Principal of Discipline & Safety).<br>• <strong>Email Signatures:</strong> Must use district values rather than personal character quotes.",
+          buttonText: "",
+          buttonLink: ""
+        }
+      ],
+      dates: [
+        { date: "SEPT 7", title: "Labor Day", note: "No School", color: "red" },
+        { date: "SEPT 16–30", title: "Home Visit Drive", note: "District-wide", color: "blue" },
+        { date: "OCT 12–13", title: "District PD Days", note: "Staff Development", color: "blue" },
+        { date: "OCT 14–16", title: "Fall Break", note: "All Campuses", color: "green" }
+      ],
+      driveLink: "https://drive.google.com"
+    };
+
+    // Render Form Controls
+    function renderForm() {
+      // 1. Actions
+      const actionsEl = document.getElementById('actionItemsContainer');
+      actionsEl.innerHTML = '';
+      state.actionItems.forEach((item, idx) => {
+        const div = document.createElement('div');
+        div.className = "p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-2 relative";
+        div.innerHTML = `
+          <button onclick="removeAction(${idx})" class="absolute top-2 right-2 text-slate-400 hover:text-red-600 text-xs"><i class="fa-solid fa-trash"></i></button>
+          <input type="text" value="${item.title.replace(/"/g, '&quot;')}" onchange="updateAction(${idx}, 'title', this.value)" class="w-11/12 font-semibold text-xs px-2 py-1 border rounded" placeholder="Action Title" />
+          <input type="text" value="${item.desc.replace(/"/g, '&quot;')}" onchange="updateAction(${idx}, 'desc', this.value)" class="w-full text-xs px-2 py-1 border rounded" placeholder="Description" />
+          <div class="grid grid-cols-2 gap-2">
+            <input type="text" value="${item.owner.replace(/"/g, '&quot;')}" onchange="updateAction(${idx}, 'owner', this.value)" class="text-xs px-2 py-1 border rounded" placeholder="Owner (e.g. Principals)" />
+            <input type="text" value="${item.due.replace(/"/g, '&quot;')}" onchange="updateAction(${idx}, 'due', this.value)" class="text-xs px-2 py-1 border rounded" placeholder="Due Date (e.g. Sept 10)" />
+          </div>
+        `;
+        actionsEl.appendChild(div);
+      });
+
+      // 2. Articles
+      const artEl = document.getElementById('articlesContainer');
+      artEl.innerHTML = '';
+      state.articles.forEach((art, idx) => {
+        const div = document.createElement('div');
+        div.className = "p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-2 relative";
+        div.innerHTML = `
+          <button onclick="removeArticle(${idx})" class="absolute top-2 right-2 text-slate-400 hover:text-red-600 text-xs"><i class="fa-solid fa-trash"></i></button>
+          <div class="grid grid-cols-3 gap-2">
+            <input type="text" value="${art.tag.replace(/"/g, '&quot;')}" onchange="updateArticle(${idx}, 'tag', this.value)" class="col-span-2 text-xs font-semibold px-2 py-1 border rounded" placeholder="Category Tag" />
+            <select onchange="updateArticle(${idx}, 'tagColor', this.value)" class="text-xs px-2 py-1 border rounded">
+              <option value="blue" ${art.tagColor === 'blue' ? 'selected' : ''}>Blue</option>
+              <option value="amber" ${art.tagColor === 'amber' ? 'selected' : ''}>Amber</option>
+              <option value="slate" ${art.tagColor === 'slate' ? 'selected' : ''}>Slate</option>
+              <option value="green" ${art.tagColor === 'green' ? 'selected' : ''}>Green</option>
+            </select>
+          </div>
+          <input type="text" value="${art.title.replace(/"/g, '&quot;')}" onchange="updateArticle(${idx}, 'title', this.value)" class="w-full text-xs font-bold px-2 py-1 border rounded" placeholder="Article Headline" />
+          <textarea onchange="updateArticle(${idx}, 'content', this.value)" rows="3" class="w-full text-xs px-2 py-1 border rounded font-sans" placeholder="Content (HTML supported)">${art.content}</textarea>
+          <div class="grid grid-cols-2 gap-2">
+            <input type="text" value="${(art.buttonText || '').replace(/"/g, '&quot;')}" onchange="updateArticle(${idx}, 'buttonText', this.value)" class="text-xs px-2 py-1 border rounded" placeholder="Button Text (optional)" />
+            <input type="text" value="${(art.buttonLink || '#').replace(/"/g, '&quot;')}" onchange="updateArticle(${idx}, 'buttonLink', this.value)" class="text-xs px-2 py-1 border rounded" placeholder="Button Link URL" />
+          </div>
+        `;
+        artEl.appendChild(div);
+      });
+
+      // 3. Dates
+      const datesEl = document.getElementById('datesContainer');
+      datesEl.innerHTML = '';
+      state.dates.forEach((d, idx) => {
+        const div = document.createElement('div');
+        div.className = "p-2 bg-slate-50 border border-slate-200 rounded-lg space-y-1 relative";
+        div.innerHTML = `
+          <button onclick="removeDate(${idx})" class="absolute top-1 right-1 text-slate-400 hover:text-red-600 text-[10px]"><i class="fa-solid fa-times"></i></button>
+          <input type="text" value="${d.date}" onchange="updateDate(${idx}, 'date', this.value)" class="w-full text-xs font-bold px-1.5 py-0.5 border rounded" placeholder="Date (e.g. SEPT 7)" />
+          <input type="text" value="${d.title}" onchange="updateDate(${idx}, 'title', this.value)" class="w-full text-xs px-1.5 py-0.5 border rounded" placeholder="Event Title" />
+          <input type="text" value="${d.note}" onchange="updateDate(${idx}, 'note', this.value)" class="w-full text-[11px] px-1.5 py-0.5 border rounded" placeholder="Subtitle" />
+        `;
+        datesEl.appendChild(div);
+      });
+    }
+
+    // Generate Full HTML String for Email
+    function generateEmailHTML() {
+      const highlightsHtml = state.highlights.map(h => `<li style="margin-bottom: 4px;">${h}</li>`).join('\n');
+      
+      const actionItemsHtml = state.actionItems.map((item, idx) => `
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="${idx < state.actionItems.length - 1 ? 'margin-bottom: 12px; border-bottom: 1px dashed #e2e8f0; padding-bottom: 12px;' : ''}">
+          <tr>
+            <td width="24" valign="top" style="padding-top: 2px;">
+              <div style="width: 18px; height: 18px; background-color: #ecfdf5; border: 2px solid #10b981; border-radius: 4px; text-align: center; line-height: 14px; color: #059669; font-size: 12px; font-weight: bold;">✓</div>
+            </td>
+            <td style="padding-left: 10px;" valign="top">
+              <div style="font-size: 13px; font-weight: 700; color: #0f172a;">${item.title}</div>
+              <div style="font-size: 12px; color: #475569; margin-top: 2px;">${item.desc}</div>
+              <div style="margin-top: 4px;">
+                <span style="font-size: 11px; background-color: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px; font-weight: 600;">Owners: ${item.owner}</span>
+                <span style="font-size: 11px; background-color: #fee2e2; color: #991b1b; padding: 2px 6px; border-radius: 4px; font-weight: 600; margin-left: 4px;">Due: ${item.due}</span>
+              </div>
+            </td>
+          </tr>
+        </table>
+      `).join('\n');
+
+      const tagColorMap = {
+        blue: { bg: '#dbeafe', text: '#1d4ed8' },
+        amber: { bg: '#fef3c7', text: '#92400e' },
+        slate: { bg: '#f1f5f9', text: '#475569' },
+        green: { bg: '#dcfce7', text: '#15803d' }
+      };
+
+      const articlesHtml = state.articles.map(art => {
+        const colors = tagColorMap[art.tagColor] || tagColorMap.blue;
+        const buttonHtml = art.buttonText ? `
+          <table border="0" cellpadding="0" cellspacing="0" style="margin-top: 12px;">
+            <tr>
+              <td>
+                <a href="${art.buttonLink || '#'}" style="display: inline-block; background-color: #003366; color: #ffffff; font-size: 12px; font-weight: 600; padding: 8px 14px; border-radius: 6px; text-decoration: none;">
+                  ${art.buttonText} &rarr;
+                </a>
+              </td>
+            </tr>
+          </table>
+        ` : '';
+
+        return `
+          <tr>
+            <td class="mobile-pad" style="padding: 6px 32px 14px 32px;">
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden;">
+                <tr>
+                  <td style="padding: 16px 20px 10px 20px; border-bottom: 1px solid #f1f5f9;">
+                    <span style="background-color: ${colors.bg}; color: ${colors.text}; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; text-transform: uppercase;">
+                      ${art.tag}
+                    </span>
+                    <h2 style="margin: 8px 0 0 0; font-size: 17px; font-weight: 700; color: #0f172a;">
+                      ${art.title}
+                    </h2>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 16px 20px; font-size: 13px; line-height: 22px; color: #334155;">
+                    <div>${art.content}</div>
+                    ${buttonHtml}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        `;
+      }).join('\n');
+
+      const dateColors = {
+        red: '#dc2626',
+        blue: '#0284c7',
+        green: '#059669'
+      };
+
+      const datesHtml = state.dates.map(d => `
+        <td class="mobile-full" width="${Math.floor(100 / state.dates.length)}%" valign="top" style="padding: 4px;">
+          <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 8px; text-align: center;">
+            <div style="font-size: 11px; font-weight: 700; color: ${dateColors[d.color] || '#0284c7'}; text-transform: uppercase;">${d.date}</div>
+            <div style="font-size: 12px; font-weight: 600; color: #0f172a; margin-top: 2px;">${d.title}</div>
+            <div style="font-size: 10px; color: #64748b;">${d.note}</div>
+          </div>
+        </td>
+      `).join('\n');
+
+      return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SST Public Schools - ${state.title}</title>
+  <style type="text/css">
+    body { margin: 0; padding: 0; min-width: 100%; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; }
+    table { border-spacing: 0; }
+    td { padding: 0; }
+    a { color: #0284c7; text-decoration: none; }
+    .main-table { background-color: #ffffff; margin: 0 auto; max-width: 680px; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; }
+    @media only screen and (max-width: 640px) {
+      .mobile-full { width: 100% !important; display: block !important; padding-left: 0 !important; padding-right: 0 !important; }
+      .mobile-pad { padding-left: 16px !important; padding-right: 16px !important; }
+      .header-title { font-size: 20px !important; }
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
+  <center style="width: 100%; background-color: #f1f5f9; padding: 20px 0 40px 0;">
+    <table class="main-table" align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; margin: 0 auto; max-width: 680px; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);">
+      
+      <!-- Top Accent Bar -->
+      <tr>
+        <td height="6" style="background-color: #003366; line-height: 6px; font-size: 6px;">&nbsp;</td>
+      </tr>
+
+      <!-- Confidentiality Bar -->
+      <tr>
+        <td style="background-color: #fef2f2; border-bottom: 1px solid #fee2e2; padding: 8px 24px;">
+          <table border="0" cellpadding="0" cellspacing="0" width="100%">
+            <tr>
+              <td align="left" style="font-size: 11px; font-weight: 700; color: #dc2626; text-transform: uppercase;">
+                &bull; Confidential &bull; Executive &amp; Campus Leadership Update
+              </td>
+              <td align="right" style="font-size: 11px; color: #64748b;">Internal Only</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+
+      <!-- Header -->
+      <tr>
+        <td class="mobile-pad" style="background-color: #002b49; padding: 28px 32px; color: #ffffff;">
+          <table border="0" cellpadding="0" cellspacing="0" width="100%">
+            <tr>
+              <td>
+                <div style="font-size: 11px; font-weight: 700; letter-spacing: 1.5px; color: #93c5fd; text-transform: uppercase;">School of Science &amp; Technology</div>
+                <div style="font-size: 10px; color: #cbd5e1;">Better Education, Better Future</div>
+              </td>
+              <td align="right">
+                <span style="background-color: rgba(255, 255, 255, 0.15); border-radius: 16px; padding: 6px 12px; color: #ffffff; font-size: 12px; font-weight: 600;">
+                  🗓️ ${state.date}
+                </span>
+              </td>
+            </tr>
+            <tr>
+              <td colspan="2" style="padding-top: 20px;">
+                <h1 class="header-title" style="margin: 0; font-size: 24px; line-height: 30px; font-weight: 800; color: #ffffff;">
+                  ${state.title}
+                </h1>
+                <p style="margin: 6px 0 0 0; font-size: 13px; color: #94a3b8;">
+                  ${state.subtitle}
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+
+      <!-- Highlights Callout -->
+      <tr>
+        <td class="mobile-pad" style="padding: 20px 32px 10px 32px;">
+          <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #0284c7; border-radius: 8px;">
+            <tr>
+              <td style="padding: 16px 20px;">
+                <div style="font-size: 13px; font-weight: 700; color: #0369a1; text-transform: uppercase; margin-bottom: 6px;">📌 Executive Highlights at a Glance</div>
+                <ul style="margin: 0; padding-left: 18px; font-size: 13px; line-height: 20px; color: #334155;">
+                  ${highlightsHtml}
+                </ul>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+
+      <!-- Action Items Card -->
+      <tr>
+        <td class="mobile-pad" style="padding: 10px 32px 16px 32px;">
+          <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; overflow: hidden;">
+            <tr>
+              <td style="background-color: #1e293b; padding: 12px 20px;">
+                <span style="font-size: 13px; font-weight: 700; color: #ffffff; text-transform: uppercase;">✅ Immediate Action Items &amp; Deadlines</span>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 16px 20px;">
+                ${actionItemsHtml}
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+
+      <!-- Dynamic News Articles -->
+      ${articlesHtml}
+
+      <!-- Calendar Events -->
+      <tr>
+        <td class="mobile-pad" style="padding: 8px 32px 16px 32px;">
+          <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">
+            <tr>
+              <td style="font-size: 13px; font-weight: 700; color: #0f172a; text-transform: uppercase; padding-bottom: 10px;">
+                🗓️ Mark Your Calendar: Key Upcoming Dates
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                  <tr>
+                    ${datesHtml}
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+
+      <!-- Quick Resources -->
+      <tr>
+        <td class="mobile-pad" style="padding: 8px 32px 20px 32px;">
+          <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 20px;">
+            <tr>
+              <td style="font-size: 13px; font-weight: 700; color: #0f172a; text-transform: uppercase; padding-bottom: 8px;">
+                🔗 Leadership Resource Hub
+              </td>
+            </tr>
+            <tr>
+              <td style="font-size: 12px; line-height: 22px;">
+                &bull; <a href="#" style="color: #0284c7; font-weight: 600;">SST Style Guide &amp; Toolkit</a> &bull; <a href="#" style="color: #0284c7; font-weight: 600;">2026-27 Academic Calendar</a> &bull; <a href="#" style="color: #0284c7; font-weight: 600;">Department Directory</a><br/>
+                &bull; <a href="${state.driveLink}" style="color: #0284c7; font-weight: 600;">📁 Access Superintendent Google Drive Archive &rarr;</a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+
+      <!-- Footer -->
+      <tr>
+        <td class="mobile-pad" style="background-color: #0f172a; padding: 24px 32px; color: #94a3b8; font-size: 11px; line-height: 18px;">
+          <div style="color: #ffffff; font-weight: 700; font-size: 12px; margin-bottom: 4px;">From the Superintendent's Office</div>
+          This executive bulletin is curated weekly following the Executive Committee meeting.<br/>
+          <strong>Questions or Additions:</strong> Contact Chief of Staff (maltiyev@ssttx.org) or Communications (aruiz@ssttx.org).
+        </td>
+      </tr>
+
+    </table>
+  </center>
+</body>
+</html>`;
+    }
+
+    // Refresh Live Preview
+    function updatePreview() {
+      const previewEl = document.getElementById('previewContainer');
+      previewEl.innerHTML = generateEmailHTML();
+    }
+
+    // Handlers for State mutations
+    function updateAction(index, field, value) {
+      state.actionItems[index][field] = value;
+      updatePreview();
+    }
+    function removeAction(index) {
+      state.actionItems.splice(index, 1);
+      renderForm();
+      updatePreview();
+    }
+    document.getElementById('btnAddAction').addEventListener('click', () => {
+      state.actionItems.push({ title: "New Action Item", desc: "Brief description of the requirement", owner: "Campus Leads", due: "TBD" });
+      renderForm();
+      updatePreview();
+    });
+
+    function updateArticle(index, field, value) {
+      state.articles[index][field] = value;
+      updatePreview();
+    }
+    function removeArticle(index) {
+      state.articles.splice(index, 1);
+      renderForm();
+      updatePreview();
+    }
+    document.getElementById('btnAddArticle').addEventListener('click', () => {
+      state.articles.push({ tag: "General Update", tagColor: "blue", title: "New Headline", content: "Details and instructions regarding this agenda topic.", buttonText: "", buttonLink: "#" });
+      renderForm();
+      updatePreview();
+    });
+
+    function updateDate(index, field, value) {
+      state.dates[index][field] = value;
+      updatePreview();
+    }
+    function removeDate(index) {
+      state.dates.splice(index, 1);
+      renderForm();
+      updatePreview();
+    }
+    document.getElementById('btnAddDate').addEventListener('click', () => {
+      state.dates.push({ date: "OCT 1", title: "Event Name", note: "Campus Note", color: "blue" });
+      renderForm();
+      updatePreview();
+    });
+
+    // Inputs bindings
+    document.getElementById('inputDate').addEventListener('input', (e) => { state.date = e.target.value; updatePreview(); });
+    document.getElementById('inputTitle').addEventListener('input', (e) => { state.title = e.target.value; updatePreview(); });
+    document.getElementById('inputSubtitle').addEventListener('input', (e) => { state.subtitle = e.target.value; updatePreview(); });
+    document.getElementById('inputDriveLink').addEventListener('input', (e) => { state.driveLink = e.target.value; updatePreview(); });
+    document.getElementById('inputHighlights').addEventListener('input', (e) => {
+      state.highlights = e.target.value.split('\n').filter(line => line.trim().length > 0);
+      updatePreview();
+    });
+
+    // View toggle desktop / mobile
+    const previewContainer = document.getElementById('previewContainer');
+    const btnDesktop = document.getElementById('btnViewDesktop');
+    const btnMobile = document.getElementById('btnViewMobile');
+
+    btnDesktop.addEventListener('click', () => {
+      previewContainer.style.maxWidth = '680px';
+      btnDesktop.className = "px-3 py-1.5 bg-blue-50 text-blue-700 font-semibold text-xs rounded-lg border border-blue-200 flex items-center space-x-1";
+      btnMobile.className = "px-3 py-1.5 bg-white text-slate-600 font-semibold text-xs rounded-lg border border-slate-200 hover:bg-slate-50 flex items-center space-x-1";
+    });
+
+    btnMobile.addEventListener('click', () => {
+      previewContainer.style.maxWidth = '390px';
+      btnMobile.className = "px-3 py-1.5 bg-blue-50 text-blue-700 font-semibold text-xs rounded-lg border border-blue-200 flex items-center space-x-1";
+      btnDesktop.className = "px-3 py-1.5 bg-white text-slate-600 font-semibold text-xs rounded-lg border border-slate-200 hover:bg-slate-50 flex items-center space-x-1";
+    });
+
+    // Copy to clipboard actions
+    function showCopyToast(msg) {
+      const alert = document.getElementById('copyAlert');
+      alert.innerHTML = `<i class="fa-solid fa-circle-check mr-1"></i> ${msg}`;
+      alert.classList.remove('hidden');
+      setTimeout(() => alert.classList.add('hidden'), 3000);
+    }
+
+    document.getElementById('btnCopyHtml').addEventListener('click', () => {
+      const html = generateEmailHTML();
+      navigator.clipboard.writeText(html).then(() => {
+        showCopyToast('HTML Source Copied!');
+      });
+    });
+
+    document.getElementById('btnCopyRich').addEventListener('click', async () => {
+      const html = generateEmailHTML();
+      try {
+        const blobInput = new Blob([html], { type: 'text/html' });
+        const clipboardItem = new ClipboardItem({ 'text/html': blobInput });
+        await navigator.clipboard.write([clipboardItem]);
+        showCopyToast('Rich Email Copied! Paste directly into Gmail/ParentSquare.');
+      } catch (err) {
+        // Fallback for browsers that restrict rich clipboard write
+        const dummy = document.createElement('div');
+        dummy.innerHTML = html;
+        document.body.appendChild(dummy);
+        const range = document.createRange();
+        range.selectNodeContents(dummy);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+        document.execCommand('copy');
+        document.body.removeChild(dummy);
+        showCopyToast('Rich text copied to clipboard!');
+      }
+    });
+
+    // Download HTML file
+    document.getElementById('btnDownload').addEventListener('click', () => {
+      const html = generateEmailHTML();
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `SST_Superintendent_Update_${state.date.replace(/[^a-zA-Z0-9]/g, '_')}.html`;
+      a.click();
+    });
+
+    // Initial render
+    renderForm();
+    updatePreview();
+  </script>
+</body>
+</html>
