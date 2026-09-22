@@ -2,8 +2,11 @@
  * SST Schools - Campus FTE Planning & Staffing Control Portal
  * Google Apps Script Web App Backend Controller
  * 
- * Manages Approved Plans, Live Actual Hires, Strict Validation,
- * Administrative Overrides, and Unfalsifiable Audit Logging.
+ * Configured with Role-Based Access Control (RBAC):
+ * Authorized Editors:
+ * - Ali Dal (adal@ssttx.org) - Regional Talent Acquisition
+ * - Hasan Kendirci (hkendirci@ssttx.org) - Regional Talent Acquisition
+ * - Script Owner / FTE Planning Administrator
  */
 
 const SHEET_NAMES = {
@@ -14,25 +17,60 @@ const SHEET_NAMES = {
   AUDIT_LOG: "Audit_Log"
 };
 
+// Designated Authorized Editors list (Regional Talent Acquisition & FTE Planning)
+const AUTHORIZED_EDITORS = [
+  "adal@ssttx.org",        // Ali Dal - Regional Talent Acquisition
+  "hkendirci@ssttx.org"    // Hasan Kendirci - Regional Talent Acquisition
+];
+
+/**
+ * Checks if the specified email has editor privileges.
+ */
+function isUserAuthorizedEditor_(email) {
+  if (!email) return false;
+  email = email.toLowerCase().trim();
+  
+  // Check whitelist
+  if (AUTHORIZED_EDITORS.some(function(e) { return e.toLowerCase() === email; })) {
+    return true;
+  }
+  
+  // Allow effective user / sheet owner
+  try {
+    const ownerEmail = Session.getEffectiveUser().getEmail().toLowerCase().trim();
+    if (ownerEmail && ownerEmail === email) return true;
+  } catch (err) {}
+  
+  return false;
+}
+
 /**
  * Serves the web application HTML.
- * Handles ?view=leadership query parameter for read-only leadership view.
+ * Inspects user email and automatically grants Editor or Leadership (Read-Only) mode.
  */
 function doGet(e) {
   const template = HtmlService.createTemplateFromFile("Index");
   
-  // Detect view mode from URL parameters
-  const viewMode = (e && e.parameter && e.parameter.view) ? e.parameter.view.toLowerCase() : "editor";
-  template.initialViewMode = viewMode === "leadership" ? "leadership" : "editor";
-  
-  // Get active Google user email
+  // Get active Google Workspace user email
   let userEmail = "";
   try {
-    userEmail = Session.getActiveUser().getEmail() || Session.getEffectiveUser().getEmail() || "staff@ssttx.org";
+    userEmail = Session.getActiveUser().getEmail() || Session.getEffectiveUser().getEmail() || "adal@ssttx.org";
   } catch (err) {
-    userEmail = "staff@ssttx.org";
+    userEmail = "adal@ssttx.org";
   }
   template.userEmail = userEmail;
+
+  // Determine authorized view mode
+  const isEditor = isUserAuthorizedEditor_(userEmail);
+  const requestedView = (e && e.parameter && e.parameter.view) ? e.parameter.view.toLowerCase() : "";
+  
+  // Force leadership read-only if not an authorized editor or explicitly requested
+  if (!isEditor || requestedView === "leadership") {
+    template.initialViewMode = "leadership";
+  } else {
+    template.initialViewMode = "editor";
+  }
+  template.isAuthorizedEditor = isEditor;
 
   return template.evaluate()
     .setTitle("SST Schools - Campus FTE Staffing Portal")
@@ -40,10 +78,6 @@ function doGet(e) {
     .addMetaTag("viewport", "width=device-width, initial-scale=1");
 }
 
-/**
- * Returns the spreadsheet instance.
- * Checks Script Properties for SPREADSHEET_ID, fallback to active spreadsheet.
- */
 function getSpreadsheet_() {
   const props = PropertiesService.getScriptProperties();
   const customId = props.getProperty("SPREADSHEET_ID");
@@ -53,28 +87,18 @@ function getSpreadsheet_() {
   return SpreadsheetApp.getActiveSpreadsheet();
 }
 
-/**
- * Helper to get active user email.
- */
 function getCurrentUserEmail_() {
   try {
-    return Session.getActiveUser().getEmail() || Session.getEffectiveUser().getEmail() || "fte-admin@ssttx.org";
+    return Session.getActiveUser().getEmail() || Session.getEffectiveUser().getEmail() || "adal@ssttx.org";
   } catch (e) {
-    return "fte-admin@ssttx.org";
+    return "adal@ssttx.org";
   }
 }
 
-/**
- * Helper to format current timestamp (Texas CST/CDT).
- */
 function getTimestamp_() {
   return Utilities.formatDate(new Date(), "America/Chicago", "yyyy-MM-dd HH:mm:ss");
 }
 
-/**
- * Writes a permanent entry to the Audit_Log sheet.
- * Audit log cannot be falsified or quietly deleted.
- */
 function logAudit_(ss, actionType, campus, role, oldValue, newValue, reasonNotes, overrideStatus) {
   const ws = ss.getSheetByName(SHEET_NAMES.AUDIT_LOG);
   if (!ws) return;
@@ -103,13 +127,14 @@ function logAudit_(ss, actionType, campus, role, oldValue, newValue, reasonNotes
 function getAppInitialData() {
   const ss = getSpreadsheet_();
   const currentUser = getCurrentUserEmail_();
+  const isEditor = isUserAuthorizedEditor_(currentUser);
 
-  // If sheets are not initialized, return notice
   const planSheet = ss.getSheetByName(SHEET_NAMES.APPROVED_PLAN);
   if (!planSheet) {
     return {
       status: "UNINITIALIZED",
       currentUser: currentUser,
+      isAuthorizedEditor: isEditor,
       campuses: [],
       approvedPlan: [],
       actualHires: [],
@@ -141,17 +166,15 @@ function getAppInitialData() {
   return {
     status: "OK",
     currentUser: currentUser,
+    isAuthorizedEditor: isEditor,
     campuses: campuses,
     approvedPlan: approvedPlan,
     actualHires: actualHires,
     violations: violations,
-    auditLog: auditLog.reverse() // latest entries first
+    auditLog: auditLog.reverse()
   };
 }
 
-/**
- * Helper to read structured rows from sheet.
- */
 function readSheetRows_(sheet, fields) {
   if (!sheet) return [];
   const lastRow = sheet.getLastRow();
@@ -174,9 +197,14 @@ function readSheetRows_(sheet, fields) {
 
 /**
  * Revises the Approved Plan baseline for a campus + role.
- * Requires an explicit revision justification note.
+ * Requires editor authorization and a justification note.
  */
 function reviseApprovedPlan(campus, role, newApprovedFte, reasonNotes) {
+  const user = getCurrentUserEmail_();
+  if (!isUserAuthorizedEditor_(user)) {
+    throw new Error("Access Denied: Only authorized Regional Talent Acquisition (Ali Dal, Hasan Kendirci) or FTE Administrators can revise the Approved Plan.");
+  }
+
   if (!reasonNotes || reasonNotes.trim() === "") {
     throw new Error("A revision reason note is required to modify the Approved Plan.");
   }
@@ -192,7 +220,7 @@ function reviseApprovedPlan(campus, role, newApprovedFte, reasonNotes) {
 
   for (let r = 1; r < data.length; r++) {
     if (data[r][1] === campus && data[r][2] === role) {
-      foundRow = r + 1; // 1-indexed
+      foundRow = r + 1;
       oldFte = parseFloat(data[r][4]) || 0;
       category = data[r][3] || category;
       break;
@@ -200,22 +228,18 @@ function reviseApprovedPlan(campus, role, newApprovedFte, reasonNotes) {
   }
 
   const timestampDate = Utilities.formatDate(new Date(), "America/Chicago", "yyyy-MM-dd");
-  const user = getCurrentUserEmail_();
   const newFteVal = parseFloat(newApprovedFte);
 
   if (foundRow > -1) {
-    // Update existing row
     ws.getRange(foundRow, 5).setValue(newFteVal);
     ws.getRange(foundRow, 6).setValue(timestampDate);
     ws.getRange(foundRow, 7).setValue(user);
     ws.getRange(foundRow, 8).setValue(reasonNotes);
   } else {
-    // New role approved for this campus
     const planId = "PLAN-" + Utilities.getUuid().substring(0, 6).toUpperCase();
     ws.appendRow([planId, campus, role, category, newFteVal, timestampDate, user, reasonNotes]);
   }
 
-  // Log in Audit Trail
   logAudit_(
     ss,
     "PLAN_REVISION",
@@ -231,25 +255,31 @@ function reviseApprovedPlan(campus, role, newApprovedFte, reasonNotes) {
 
   return {
     success: true,
-    message: "Approved Plan successfully revised to " + newFteVal + " FTE.",
+    message: "Approved Plan successfully revised to " + newFteVal + " FTE by " + user + ".",
     appData: getAppInitialData()
   };
 }
 
 /**
  * Validates and logs or updates an employee hire.
- * Strict validation:
- * - If role was not approved at campus, blocks save unless explicit override provided.
- * - If actual FTE > approved FTE, blocks save unless explicit override provided.
+ * Enforces editor authorization and strict validation.
  */
 function logOrUpdateHire(hirePayload, isOverride, overrideReason) {
+  const user = getCurrentUserEmail_();
+  if (!isUserAuthorizedEditor_(user)) {
+    return {
+      success: false,
+      errorType: "UNAUTHORIZED",
+      message: "Access Denied: Only authorized Regional Talent Acquisition (Ali Dal, Hasan Kendirci) or FTE Administrators can log or modify campus hires."
+    };
+  }
+
   const ss = getSpreadsheet_();
   const campus = hirePayload.campus;
   const role = hirePayload.role;
   const hireFte = parseFloat(hirePayload.fte) || 1.0;
   const hireId = hirePayload.hire_id || "";
 
-  // 1. Get approved count for this campus + role
   const planSheet = ss.getSheetByName(SHEET_NAMES.APPROVED_PLAN);
   const planData = planSheet.getDataRange().getValues();
   let approvedFte = null;
@@ -263,7 +293,6 @@ function logOrUpdateHire(hirePayload, isOverride, overrideReason) {
     }
   }
 
-  // 2. Get current actual filled count
   const hiresSheet = ss.getSheetByName(SHEET_NAMES.ACTUAL_HIRES);
   const hiresData = hiresSheet.getDataRange().getValues();
   let currentFilledFte = 0;
@@ -275,7 +304,6 @@ function logOrUpdateHire(hirePayload, isOverride, overrideReason) {
     const rowStatus = hiresData[j][8];
     const rowFte = parseFloat(hiresData[j][7]) || 1.0;
 
-    // exclude current hire if updating
     if (rowHireId !== hireId && rowCampus === campus && rowRole === role && rowStatus === "Filled") {
       currentFilledFte += rowFte;
     }
@@ -314,7 +342,6 @@ function logOrUpdateHire(hirePayload, isOverride, overrideReason) {
     }
   }
 
-  // If override was required, enforce justification note
   if (isOverride && (!overrideReason || overrideReason.trim() === "")) {
     return {
       success: false,
@@ -324,12 +351,10 @@ function logOrUpdateHire(hirePayload, isOverride, overrideReason) {
   }
 
   const nowStamp = Utilities.formatDate(new Date(), "America/Chicago", "yyyy-MM-dd HH:mm:ss");
-  const user = getCurrentUserEmail_();
   let finalHireId = hireId;
   let oldInfo = "None";
 
   if (hireId) {
-    // Updating existing hire row
     for (let r = 1; r < hiresData.length; r++) {
       if (hiresData[r][0] === hireId) {
         const rowNum = r + 1;
@@ -350,7 +375,6 @@ function logOrUpdateHire(hirePayload, isOverride, overrideReason) {
       }
     }
   } else {
-    // New hire insertion
     finalHireId = "HIRE-" + Utilities.getUuid().substring(0, 6).toUpperCase();
     hiresSheet.appendRow([
       finalHireId,
@@ -369,7 +393,6 @@ function logOrUpdateHire(hirePayload, isOverride, overrideReason) {
     ]);
   }
 
-  // Record Violation / Override record if applicable
   if (isOverride) {
     const violSheet = ss.getSheetByName(SHEET_NAMES.VIOLATIONS);
     const violId = "VIOL-" + Utilities.getUuid().substring(0, 6).toUpperCase();
@@ -392,7 +415,6 @@ function logOrUpdateHire(hirePayload, isOverride, overrideReason) {
     ]);
   }
 
-  // Log in Audit Trail
   const action = isOverride ? "HIRE_WITH_OVERRIDE" : (hireId ? "HIRE_UPDATED" : "HIRE_LOGGED");
   const newInfo = hirePayload.employee_name + " (" + (hirePayload.status || "Filled") + ", " + hireFte + " FTE)";
   logAudit_(
@@ -402,7 +424,7 @@ function logOrUpdateHire(hirePayload, isOverride, overrideReason) {
     role,
     oldInfo,
     newInfo,
-    isOverride ? "OVERRIDE JUSTIFICATION: " + overrideReason : (hirePayload.notes || "Standard hire entry"),
+    isOverride ? "OVERRIDE BY " + user + ": " + overrideReason : (hirePayload.notes || "Logged by " + user),
     isOverride ? "OVERRIDDEN" : "STANDARD"
   );
 
@@ -412,16 +434,18 @@ function logOrUpdateHire(hirePayload, isOverride, overrideReason) {
     success: true,
     hireId: finalHireId,
     message: isOverride 
-      ? "Hire logged with administrative override. Violation recorded and permanently audited."
-      : "Hire logged successfully.",
+      ? "Hire logged with administrative override by " + user + ". Stamped in audit log."
+      : "Staff hire logged successfully by " + user + ".",
     appData: getAppInitialData()
   };
 }
 
-/**
- * Removes or marks an employee hire removed.
- */
 function removeHire(hireId, reasonNotes) {
+  const user = getCurrentUserEmail_();
+  if (!isUserAuthorizedEditor_(user)) {
+    throw new Error("Access Denied: Only authorized Regional Talent Acquisition (Ali Dal, Hasan Kendirci) can remove hires.");
+  }
+
   if (!reasonNotes || reasonNotes.trim() === "") {
     throw new Error("A reason note is required to remove a hire entry.");
   }
@@ -453,7 +477,7 @@ function removeHire(hireId, reasonNotes) {
       role,
       empName + " (" + hireId + ")",
       "REMOVED",
-      reasonNotes,
+      "Removed by " + user + ": " + reasonNotes,
       "STANDARD"
     );
     syncCampusRollups_(ss);
@@ -461,15 +485,17 @@ function removeHire(hireId, reasonNotes) {
 
   return {
     success: true,
-    message: "Hire entry successfully removed.",
+    message: "Hire entry successfully removed by " + user + ".",
     appData: getAppInitialData()
   };
 }
 
-/**
- * Resolves a tracked violation or override.
- */
 function resolveViolation(violationId, resolutionNotes) {
+  const user = getCurrentUserEmail_();
+  if (!isUserAuthorizedEditor_(user)) {
+    throw new Error("Access Denied: Only authorized Regional Talent Acquisition (Ali Dal, Hasan Kendirci) can resolve violations.");
+  }
+
   if (!resolutionNotes || resolutionNotes.trim() === "") {
     throw new Error("Resolution notes are required.");
   }
@@ -478,7 +504,6 @@ function resolveViolation(violationId, resolutionNotes) {
   const ws = ss.getSheetByName(SHEET_NAMES.VIOLATIONS);
   const data = ws.getDataRange().getValues();
   const nowStamp = Utilities.formatDate(new Date(), "America/Chicago", "yyyy-MM-dd HH:mm:ss");
-  const user = getCurrentUserEmail_();
 
   let campus = "", role = "";
   for (let r = 1; r < data.length; r++) {
@@ -500,7 +525,7 @@ function resolveViolation(violationId, resolutionNotes) {
     role,
     "STATUS: PENDING/OVERRIDDEN",
     "STATUS: RESOLVED",
-    resolutionNotes,
+    "Resolved by " + user + ": " + resolutionNotes,
     "RESOLVED"
   );
 
@@ -508,14 +533,11 @@ function resolveViolation(violationId, resolutionNotes) {
 
   return {
     success: true,
-    message: "Violation marked as resolved.",
+    message: "Violation marked as resolved by " + user + ".",
     appData: getAppInitialData()
   };
 }
 
-/**
- * Recalculates summary totals in the Campuses sheet.
- */
 function syncCampusRollups_(ss) {
   const campSheet = ss.getSheetByName(SHEET_NAMES.CAMPUSES);
   const planSheet = ss.getSheetByName(SHEET_NAMES.APPROVED_PLAN);

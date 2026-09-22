@@ -75,3 +75,30 @@ function setupDatabaseStructure() {
 
   Logger.log("SST Schools FTE Database structure verified and secured.");
 }
+
+/**
+ * Programmatically grants Editor access to Ali Dal and Hasan Kendirci
+ * on the Google Spreadsheet, and ensures sheet protections are properly assigned.
+ * Run this function once from the Apps Script editor to share with Regional Talent Acquisition.
+ */
+function grantTalentAcquisitionPermissions() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const regionalEditors = [
+    "adal@ssttx.org",        // Ali Dal - Regional Talent Acquisition
+    "hkendirci@ssttx.org"    // Hasan Kendirci - Regional Talent Acquisition
+  ];
+  
+  regionalEditors.forEach(function(email) {
+    try {
+      ss.addEditor(email);
+      Logger.log("Granted spreadsheet editor access to: " + email);
+    } catch (e) {
+      Logger.log("Notice adding editor " + email + ": " + e.message);
+    }
+  });
+
+  // Ensure Audit_Log sheet is locked down to preserve tamper-proof integrity
+  setupDatabaseStructure();
+  
+  Logger.log("Regional Talent Acquisition permissions successfully configured for Ali Dal and Hasan Kendirci.");
+}

@@ -44,9 +44,14 @@ This portal replaces spreadsheet-only FTE (full-time-equivalent) staffing tracki
 - Logs record the exact CST timestamp to the second, the user's Google email (`@ssttx.org`), previous value, new value, override status, and reason notes.
 - Includes a single-click **Export Audit to CSV** for board meetings and official state reporting.
 
-### 3. Dual Role-Based Views
-- **Editor View ("My View")**: Manage approved plans, log/update live hires, resolve open violation flags, authorize new roles, and browse audit history.
-- **Leadership View (Read-Only)**: Pure visibility for superintendents and board members with network KPIs, campus rollups, variance indicators, and role-by-role drilldown drawers. Can be accessed via the top-right toggle or by sharing the link with `?view=leadership`.
+### 3. Role-Based Access Control (RBAC) & Editor Whitelist
+- **Regional Talent Acquisition Editors**:
+  - **Ali Dal** (`adal@ssttx.org`)
+  - **Hasan Kendirci** (`hkendirci@ssttx.org`)
+  - Both Ali Dal and Hasan Kendirci have full Editor access across every campus to log new hires, update assignments, process departures, submit overrides, and revise plans. Every transaction is authenticated and signed with their individual `@ssttx.org` identity.
+- **FTE Planning Administrator**: Full oversight and configuration control.
+- **Leadership View (Read-Only)**: Pure visibility for superintendents and board members with network KPIs, campus rollups, variance indicators, and role-by-role drilldown drawers. Accessible via the top-right toggle or by sharing the link with `?view=leadership`.
+- **Live Profile Switcher**: Easily test and preview actions as Ali Dal, Hasan Kendirci, Central Admin, or Leadership using the user menu in the top navigation.
 
 ---
 

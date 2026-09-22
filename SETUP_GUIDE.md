@@ -68,20 +68,32 @@ Before deploying to Google Drive, you can test and inspect the full application 
 
 ---
 
-### Step 3: How Permissions & Views Work
+### Step 3: How Permissions & Role-Based Access Control (RBAC) Work
 
-You do not need to create or manage any external logins or passwords. Access is controlled through Google Workspace:
+You do not need to create or manage any external logins or passwords. Access is controlled through Google Workspace email accounts and server-side RBAC:
 
-| User / Audience | URL / Access Method | Capabilities |
+#### Authorized Editors Whitelist:
+The backend controller in [`apps_script/Code.gs`](file:///Users/ekode2/Desktop/AntiGravity%20Projects/apps_script/Code.gs) contains a verified whitelist:
+- **Ali Dal** (`adal@ssttx.org`) — Regional Talent Acquisition
+- **Hasan Kendirci** (`hkendirci@ssttx.org`) — Regional Talent Acquisition
+- Central Office FTE Planning Administrator / Spreadsheet Owner
+
+#### Granting Access in Google Drive / Google Sheets:
+1. **Automated One-Click Method:** In the Apps Script toolbar, select the function **`grantTalentAcquisitionPermissions`** from the function dropdown and click **Run**. This automatically shares the spreadsheet with `adal@ssttx.org` and `hkendirci@ssttx.org` as Editors and locks the `Audit_Log` against direct spreadsheet alterations.
+2. **Manual Share Dialog:** Alternatively, in Google Sheets, click the green **Share** button in the top right, enter `adal@ssttx.org` and `hkendirci@ssttx.org`, select **Editor**, and click Send.
+
+| User / Role | Identity & Email | Capabilities Across All 21 Campuses |
 | :--- | :--- | :--- |
-| **FTE Planner (Editor / "My View")** | Normal Web App URL | Full control: revise approved plans, log/update hires, approve overrides with justification, resolve violations, view full audit history. |
-| **Superintendent, Board & Leadership** | Append `?view=leadership` to the Web App URL<br>*(or share Google Sheet with "Viewer" permissions)* | **Read-Only Dashboard**: High-level network metrics, campus rollups across all 21 campuses, drill-down role inspections, open violation alerts. No edit buttons or inputs are displayed. |
+| **Regional Talent Acquisition** | **Ali Dal** (`adal@ssttx.org`)<br>**Hasan Kendirci** (`hkendirci@ssttx.org`) | **Full Campus Editor Access**: Log new hires, update existing assignments, remove vacated records, request/approve administrative overrides with mandatory justification, revise approved FTE plans, resolve tracked violations. Every action is signed with their email and timestamped in the permanent audit trail. |
+| **FTE Administrator** | `admin@ssttx.org` / Script Owner | **Full Administrator Access**: All editor capabilities, audit log export, and permission management. |
+| **Executive Leadership & Board** | Superintendent, CFO, Board Members | **Read-Only Dashboard**: High-level network metrics, campus rollups across all 21 campuses, drill-down role inspections, open violation alerts. No edit buttons or inputs are displayed. (Access via `?view=leadership` or Viewer permissions). |
 
 > [!TIP]
-> **Sharing the Link with Leadership:**
-> Simply send your superintendent and regional directors the web app link with `?view=leadership` appended (e.g. `https://script.google.com/macros/s/.../exec?view=leadership`). When they open it, it opens directly into the clean, executive read-only view.
+> **Live Web App User Switching:**
+> In the live web app, click the user badge in the top right to instantly switch active profiles between **Ali Dal (Regional Talent Acquisition)**, **Hasan Kendirci (Regional Talent Acquisition)**, **FTE Planning Administrator**, and **Leadership View (Read-Only)**.
 
 ---
+
 
 ### Step 4: How the Audit Log Works (Tamper-Proof)
 

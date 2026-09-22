@@ -184,6 +184,22 @@ HTML_TEMPLATE = f"""<!DOCTYPE html>
       box-shadow: var(--shadow-sm);
     }}
 
+
+    .user-profile-selector-wrap {{
+      position: relative;
+    }}
+    .user-switch-select {{
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }}
+    .user-badge:hover {{
+      background-color: rgba(255, 255, 255, 0.18);
+      border-color: rgba(255, 255, 255, 0.35);
+    }}
     .user-badge {{
       display: flex;
       align-items: center;
@@ -900,9 +916,21 @@ HTML_TEMPLATE = f"""<!DOCTYPE html>
         </button>
       </div>
 
-      <div class="user-badge">
-        <div class="user-avatar" id="avatar-initials">AD</div>
-        <span id="display-user-email">admin@ssttx.org</span>
+      <div class="user-profile-selector-wrap">
+        <div class="user-badge" style="cursor: pointer; gap: 0.65rem;">
+          <div class="user-avatar" id="avatar-initials">AD</div>
+          <div style="display:flex; flex-direction:column; text-align:left;">
+            <span id="display-user-name" style="font-weight:700; font-size:0.78rem; line-height:1.2; color:#ffffff;">Ali Dal</span>
+            <span id="display-user-role" style="font-size:0.68rem; color:#93c5fd;">Regional Talent Acquisition &bull; Editor</span>
+            <span id="display-user-email" style="display:none;">adal@ssttx.org</span>
+          </div>
+          <select id="select-active-user" onchange="changeActiveUserProfile(this.value)" class="user-switch-select" title="Switch Active User Profile">
+            <option value="adal@ssttx.org|Ali Dal|Regional Talent Acquisition|editor" selected>Ali Dal (adal@ssttx.org) - Regional Talent Acquisition</option>
+            <option value="hkendirci@ssttx.org|Hasan Kendirci|Regional Talent Acquisition|editor">Hasan Kendirci (hkendirci@ssttx.org) - Regional Talent Acquisition</option>
+            <option value="admin@ssttx.org|FTE Administrator|Central Office FTE Planner|editor">FTE Planning Administrator</option>
+            <option value="superintendent@ssttx.org|Executive Leadership|Superintendent &amp; Board|leadership">Leadership View (Read-Only)</option>
+          </select>
+        </div>
       </div>
     </div>
   </header>
@@ -1494,7 +1522,7 @@ HTML_TEMPLATE = f"""<!DOCTYPE html>
     let DB = JSON.parse(JSON.stringify(INITIAL_DB));
     let currentMode = "editor";
     let currentTab = "leadership";
-    let currentUserEmail = "admin@ssttx.org";
+    let currentUserEmail = "adal@ssttx.org";
 
     window.addEventListener("DOMContentLoaded", () => {{
       const urlParams = new URLSearchParams(window.location.search);
@@ -1521,10 +1549,61 @@ HTML_TEMPLATE = f"""<!DOCTYPE html>
       }}
     }});
 
+
+    function changeActiveUserProfile(valStr) {{
+      const parts = valStr.split('|');
+      const email = parts[0];
+      const name = parts[1];
+      const title = parts[2];
+      const mode = parts[3];
+
+      currentUserEmail = email;
+      const emailEl = document.getElementById('display-user-email');
+      if (emailEl) emailEl.textContent = email;
+      const nameEl = document.getElementById('display-user-name');
+      if (nameEl) nameEl.textContent = name;
+      const roleEl = document.getElementById('display-user-role');
+      if (roleEl) roleEl.innerHTML = title + (mode === 'editor' ? ' &bull; Editor' : ' &bull; Read-Only');
+      const avatarEl = document.getElementById('avatar-initials');
+      if (avatarEl) {{
+        avatarEl.textContent = name.split(' ').map(function(n) {{ return n[0]; }}).join('').substring(0, 2).toUpperCase();
+      }}
+
+      if (mode === 'leadership') {{
+        switchViewMode('leadership');
+      }} else {{
+        switchViewMode('editor');
+      }}
+      showToast('Switched user to ' + name + ' (' + email + ')', 'success');
+    }}
+
     function initializeApp() {{
-      document.getElementById("display-user-email").textContent = currentUserEmail;
-      const initials = currentUserEmail.split("@")[0].substring(0, 2).toUpperCase();
-      document.getElementById("avatar-initials").textContent = initials;
+      const emailEl = document.getElementById("display-user-email");
+      if (emailEl) emailEl.textContent = currentUserEmail;
+      
+      const selectUser = document.getElementById("select-active-user");
+      const lower = currentUserEmail.toLowerCase();
+      if (lower === "adal@ssttx.org") {{
+        const nameEl = document.getElementById("display-user-name");
+        if (nameEl) nameEl.textContent = "Ali Dal";
+        const roleEl = document.getElementById("display-user-role");
+        if (roleEl) roleEl.innerHTML = "Regional Talent Acquisition &bull; Editor";
+        const avatarEl = document.getElementById("avatar-initials");
+        if (avatarEl) avatarEl.textContent = "AD";
+        if (selectUser) selectUser.value = "adal@ssttx.org|Ali Dal|Regional Talent Acquisition|editor";
+      }} else if (lower === "hkendirci@ssttx.org") {{
+        const nameEl = document.getElementById("display-user-name");
+        if (nameEl) nameEl.textContent = "Hasan Kendirci";
+        const roleEl = document.getElementById("display-user-role");
+        if (roleEl) roleEl.innerHTML = "Regional Talent Acquisition &bull; Editor";
+        const avatarEl = document.getElementById("avatar-initials");
+        if (avatarEl) avatarEl.textContent = "HK";
+        if (selectUser) selectUser.value = "hkendirci@ssttx.org|Hasan Kendirci|Regional Talent Acquisition|editor";
+      }} else {{
+        const initials = currentUserEmail.split("@")[0].substring(0, 2).toUpperCase();
+        const avatarEl = document.getElementById("avatar-initials");
+        if (avatarEl) avatarEl.textContent = initials;
+      }}
 
       populateFilterDropdowns();
       updateKPICards();
