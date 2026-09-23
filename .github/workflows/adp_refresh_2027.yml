@@ -1,0 +1,61 @@
+# Refreshes the ADP_Positions tab of the 2027-28 FTE Planning Google Sheet.
+# Started by the portal's "Refresh ADP data" button (Apps Script passes the sheet ID).
+#
+# Required repository secrets:
+#   ADP_CLIENT_ID, ADP_CLIENT_SECRET, ADP_CERT_PEM, ADP_KEY_PEM   (same as crosscheck.yml)
+#   GOOGLE_SERVICE_ACCOUNT_JSON   key of a Google service account that has Editor access to the sheet
+name: 2027-28 planning - ADP refresh
+
+on:
+  workflow_dispatch:
+    inputs:
+      sheet_id:
+        description: Google Sheet ID of the 2027-28 FTE planning database
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: adp-refresh-2027
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install openpyxl "gspread>=6"
+
+      - name: Write ADP certificate
+        env:
+          ADP_CERT_PEM: ${{ secrets.ADP_CERT_PEM }}
+          ADP_KEY_PEM: ${{ secrets.ADP_KEY_PEM }}
+        run: |
+          if [ -z "$ADP_CERT_PEM" ] || [ -z "$ADP_KEY_PEM" ]; then
+            echo "::error::ADP_CERT_PEM / ADP_KEY_PEM secrets are not set"; exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/adp"
+          printf '%s\n' "$ADP_CERT_PEM" > "$RUNNER_TEMP/adp/cert.pem"
+          printf '%s\n' "$ADP_KEY_PEM" > "$RUNNER_TEMP/adp/key.pem"
+          chmod 600 "$RUNNER_TEMP/adp/"*.pem
+
+      - name: Pull ADP into the planning sheet
+        working-directory: planning_2027
+        env:
+          SHEET_ID: ${{ inputs.sheet_id }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          ADP_CLIENT_ID: ${{ secrets.ADP_CLIENT_ID }}
+          ADP_CLIENT_SECRET: ${{ secrets.ADP_CLIENT_SECRET }}
+          ADP_CERT_PATH: ${{ runner.temp }}/adp/cert.pem
+          ADP_KEY_PATH: ${{ runner.temp }}/adp/key.pem
+        run: python adp_to_sheet.py
+
+      - if: always()
+        run: rm -rf "$RUNNER_TEMP/adp"
