@@ -81,6 +81,19 @@ CAMPUS_BY_CODE = {c[0]: c[1] for c in CAMPUSES}
 # Rows on an approved list that are not approved 2026-27 slots
 EXCLUDED_LIST_STATUSES = {"TERM/TRANSFER", "TERM", "TRANSFER"}
 
+# Substitutes and part-time staff are left out of the cross-check on both sides
+SUB_PT_JOB_CODES = {"11SUB", "11TA"}
+SUB_PT_WORKER_TYPES = {"Part Time", "On-Call Substitute"}
+
+
+def is_sub_or_pt_adp(assignment):
+    return assignment.get("job_code") in SUB_PT_JOB_CODES or assignment.get("worker_type") in SUB_PT_WORKER_TYPES
+
+
+def is_sub_or_pt_list(job_code, worker_category):
+    cat = worker_category.upper()
+    return job_code in SUB_PT_JOB_CODES or cat.startswith("P -") or cat.startswith("SUB")
+
 
 # --------------------------------------------------------------------------- ADP
 
@@ -288,19 +301,24 @@ def load_fte_lists():
                 "notes": str(col(r, "NOTES") or "").strip(),
                 "position_id": pid,
                 "fte_location": str(col(r, "LOCATION") or "").strip(),
+                "sub_pt": is_sub_or_pt_list(job_code, str(col(r, "WORKER CATEGORY") or "").strip()),
             })
     return rows
 
 
 # --------------------------------------------------------------------------- reconcile
 
-def reconcile(fte_rows, workers):
+def reconcile(all_fte_rows, workers):
+    fte_rows = [r for r in all_fte_rows if not r["sub_pt"]]
+    sub_pt_rows = [r for r in all_fte_rows if r["sub_pt"]]
     by_pid = {}
     for w in workers:
         for a in w["assignments"]:
             if a["position_id"]:
                 by_pid.setdefault(a["position_id"], w)
     active_workers = [w for w in workers if w["status"] == "Active"]
+    # Headcount only counts full-time (non-substitute) staff
+    counted_workers = [w for w in active_workers if not is_sub_or_pt_adp(current_assignment(w))]
 
     def find_by_name(row):
         f, l = fte_name_tokens(row["first"], row["last"])
@@ -388,9 +406,16 @@ def reconcile(fte_rows, workers):
             records.append(rec)
             continue
 
-        rec["_wid"] = w["worker_id"]
-        rec["_pid_exact"] = a.get("position_id") == row["position_id"]
         issues = []
+        if is_sub_or_pt_adp(a):
+            # Approved as a full-time slot but ADP has them as part-time / substitute: not in headcount
+            rec["adp_status"] = f"Active ({a.get('worker_type') or 'part-time/substitute'})"
+            details.append(f"Approved as full-time, but ADP shows {a.get('worker_type') or a.get('job_code')}")
+            if a.get("job_code") == row["job_code"]:
+                issues.append("TITLE_MISMATCH")
+        else:
+            rec["_wid"] = w["worker_id"]
+            rec["_pid_exact"] = a.get("position_id") == row["position_id"]
         if a.get("location_code") != row["campus_code"]:
             issues.append("LOCATION_MISMATCH")
         if a.get("job_code") and a.get("job_code") != row["job_code"]:
@@ -429,9 +454,18 @@ def reconcile(fte_rows, workers):
         rec.pop("_wid", None)
         rec.pop("_pid_exact", None)
 
+    def sub_pt_listing(w):
+        """The part-time/substitute list row this person appears on, if any."""
+        pids = {a["position_id"] for a in w["assignments"]}
+        for r in sub_pt_rows:
+            if (r["position_id"] and r["position_id"] in pids) or \
+               (r["name"] and names_match(*fte_name_tokens(r["first"], r["last"]), w)):
+                return r
+        return None
+
     # Active ADP staff at a campus who are on no approved list
     list_codes = {c[0] for c in CAMPUSES if c[3]}
-    for w in active_workers:
+    for w in counted_workers:
         if w["worker_id"] in matched_worker_ids:
             continue
         a = current_assignment(w)
@@ -439,6 +473,7 @@ def reconcile(fte_rows, workers):
         if code not in CAMPUS_BY_CODE:
             continue  # central / regional office staff are outside campus FTE lists
         has_list = code in list_codes
+        pt_row = sub_pt_listing(w) if has_list else None
         records.append({
             "campus": CAMPUS_BY_CODE[code], "campus_code": code,
             "fte_name": "— Not on FTE list —", "fte_title": "", "fte_job_code": "",
@@ -455,7 +490,9 @@ def reconcile(fte_rows, workers):
             "adp_status": "Active",
             "status": "NOT_ON_LIST" if has_list else "NO_FTE_LIST",
             "issues": ["NOT_ON_LIST"] if has_list else ["NO_FTE_LIST"],
-            "detail": "Active in ADP at this campus but not on its approved FTE list" if has_list
+            "detail": (f"Full-time in ADP, but only on the {pt_row['campus']} list as part-time/substitute "
+                       f"({pt_row['file']} row {pt_row['line']})") if pt_row
+                      else "Active in ADP at this campus but not on its approved FTE list" if has_list
                       else "No approved FTE list on file for this campus",
         })
 
@@ -464,7 +501,7 @@ def reconcile(fte_rows, workers):
     headcount = Counter()
     titles = {}
     names_by_key = defaultdict(list)
-    for w in active_workers:
+    for w in counted_workers:
         a = current_assignment(w)
         if a.get("location_code") in list_codes:
             key = (a["location_code"], a.get("job_code", ""))
@@ -503,7 +540,7 @@ def reconcile(fte_rows, workers):
             "campus": campus, "code": code, "region": region, "has_list": bool(fname),
             "fte_file": fname or "",
             "approved": sum(t["approved"] for t in tc),
-            "adp_active": sum(1 for w in active_workers if current_assignment(w).get("location_code") == code),
+            "adp_active": sum(1 for w in counted_workers if current_assignment(w).get("location_code") == code),
             "matched": sum(1 for r in recs if r["status"] in ("MATCH", "VACANT_STILL_ACTIVE")),
             "open": sum(1 for r in recs if r["status"] == "OPEN"),
             "location_mismatch": sum(1 for r in recs if "LOCATION_MISMATCH" in r["issues"]),
@@ -515,7 +552,7 @@ def reconcile(fte_rows, workers):
             "overhire": sum(max(t["variance"], 0) for t in tc),
         })
 
-    non_campus = Counter(current_assignment(w).get("location_code") or "(none)" for w in active_workers
+    non_campus = Counter(current_assignment(w).get("location_code") or "(none)" for w in counted_workers
                          if current_assignment(w).get("location_code") not in CAMPUS_BY_CODE)
 
     return {
@@ -524,7 +561,8 @@ def reconcile(fte_rows, workers):
         "title_counts": title_counts,
         "records": records,
         "non_campus_active": {NON_CAMPUS_LOCATIONS.get(k, k): v for k, v in non_campus.items()},
-        "adp_active_total": len(active_workers),
+        "adp_active_total": len(counted_workers),
+        "excluded_sub_pt": {"fte_rows": len(sub_pt_rows), "adp_active": len(active_workers) - len(counted_workers)},
     }
 
 

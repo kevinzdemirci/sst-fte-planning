@@ -258,8 +258,10 @@ const num = (v, d, cls = "") => v === 0 || v === "0"
 function renderMeta() {
   const lists = REPORT.campuses.filter(c => c.has_list).length;
   const nc = Object.entries(REPORT.non_campus_active || {}).map(([k, v]) => `${k} ${v}`).join(", ");
-  $("meta").textContent = `ADP pulled ${REPORT.adp_pulled_at} · ${lists} campus FTE lists · cross-check run ${REPORT.generated_at}`;
-  $("foot").textContent = `Central/regional office staff are not on campus FTE lists and are excluded from the counts (${nc}). ` +
+  $("meta").textContent = `ADP pulled ${REPORT.adp_pulled_at} · ${lists} campus FTE lists · full-time staff only (no subs / part-time) · cross-check run ${REPORT.generated_at}`;
+  const ex = REPORT.excluded_sub_pt || {};
+  $("foot").textContent = `Substitutes and part-time staff are excluded (${ex.fte_rows ?? 0} FTE list rows, ${ex.adp_active ?? 0} active in ADP). ` +
+    `Central/regional office staff are not on campus FTE lists and are excluded from the counts (${nc}). ` +
     `Titles are compared by ADP job code (e.g. 11TEACH); the FTE list "Assignment" (grade/subject) is shown for reference only.`;
 }
 
