@@ -33,6 +33,10 @@ Cross-checks every person on the **2026-27 Approved FTE Lists** against the **AD
 
 People are matched by ADP Position ID, falling back to name when the Position ID changed (transfer/rehire). Terminated and template rows copied from other campuses (`POSITION STATUS = T`, `STATUS = TERM/TRANSFER`) are not counted as approved slots.
 
+## 🗓️ 2027-28 FTE Planning Portal
+
+For next school year the spreadsheets are replaced by a Google Workspace portal (`planning_2027/`). Staff sign in with their @ssttx.org account and update positions directly. Every change is logged with who, when, and the old and new values, and the ADP cross-check runs live in the portal, with a **Refresh ADP data** button. Setup steps: [planning_2027/SETUP_2027.md](planning_2027/SETUP_2027.md).
+
 ## 🔄 Refreshing the data
 
 ```bash

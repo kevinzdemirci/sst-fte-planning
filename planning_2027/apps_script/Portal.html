@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<base target="_top">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SST FTE Planning</title>
+<style>
+  :root {
+    --navy: #0B2545; --bg: #f4f6f9; --surface: #fff; --surface-2: #f8fafc; --border: #e2e8f0;
+    --ink: #0f172a; --ink-2: #475569; --ink-3: #64748b;
+    --ok: #15803d; --ok-bg: #dcfce7; --warn: #b45309; --warn-bg: #fef3c7;
+    --bad: #b91c1c; --bad-bg: #fee2e2; --info: #1d4ed8; --info-bg: #dbeafe;
+    --muted-bg: #f1f5f9; --focus: #2563eb; --bar: #133968;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0b1220; --surface: #111a2c; --surface-2: #0f1727; --border: #24324a;
+      --ink: #e5e9f0; --ink-2: #aab4c3; --ink-3: #8592a6;
+      --ok: #4ade80; --ok-bg: #12301f; --warn: #fbbf24; --warn-bg: #3a2a0a;
+      --bad: #f87171; --bad-bg: #3b1414; --info: #93c5fd; --info-bg: #13274a;
+      --muted-bg: #1a2438; --focus: #60a5fa; --bar: #60a5fa;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg);
+         color: var(--ink); font-size: 14px; line-height: 1.45; }
+  header { background: var(--navy); color: #fff; padding: 12px 20px; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+  header h1 { font-size: 18px; margin: 0; }
+  header .who { font-size: 12px; color: #c7d2fe; }
+  header .grow { flex: 1 1 260px; }
+  header .hbtns { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  #refresh-msg { font-size: 12px; color: #c7d2fe; } #refresh-msg a { color: #fff; }
+  nav { display: flex; gap: 2px; padding: 0 16px; background: var(--surface); border-bottom: 1px solid var(--border); overflow-x: auto; }
+  nav button { font: inherit; font-weight: 600; font-size: 13px; background: none; border: 0; border-bottom: 3px solid transparent;
+               padding: 11px 14px; color: var(--ink-2); cursor: pointer; white-space: nowrap; }
+  nav button.on { color: var(--ink); border-bottom-color: var(--navy); }
+  :root:not([data-theme="light"]) nav button.on { border-bottom-color: var(--focus); }
+  main { max-width: 1440px; margin: 0 auto; padding: 16px 16px 48px; }
+  section[hidden] { display: none; }
+  h2 { font-size: 15px; margin: 22px 0 4px; } h2:first-child { margin-top: 4px; }
+  .sub { color: var(--ink-3); font-size: 12.5px; margin: 0 0 10px; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+  .count { margin-left: auto; color: var(--ink-3); font-size: 12px; }
+  select, input, textarea, button.btn { font: inherit; font-size: 13px; padding: 6px 10px; border-radius: 7px;
+       border: 1px solid var(--border); background: var(--surface); color: var(--ink); }
+  input[type=search] { min-width: 200px; flex: 1 1 200px; max-width: 320px; }
+  button.btn { cursor: pointer; font-weight: 600; } button.btn:hover { border-color: var(--focus); }
+  button.btn:disabled { opacity: .55; cursor: default; }
+  button.primary { background: var(--navy); color: #fff; border-color: var(--navy); }
+  button.light { background: #fff; color: var(--navy); border-color: #fff; }
+  button.danger { color: var(--bad); }
+  label.chk { font-size: 12.5px; color: var(--ink-2); display: flex; gap: 5px; align-items: center; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-bottom: 6px; }
+  .kpi { background: var(--surface); border: 1px solid var(--border); border-top: 3px solid var(--border); border-radius: 10px;
+         padding: 10px 12px; text-align: left; font: inherit; color: inherit; cursor: pointer; width: 100%; }
+  .kpi:hover { outline: 2px solid var(--focus); outline-offset: -1px; }
+  .kpi .lbl { font-size: 11.5px; color: var(--ink-2); font-weight: 600; }
+  .kpi .val { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .kpi .hint { font-size: 11px; color: var(--ink-3); }
+  .kpi.ok { border-top-color: var(--ok); } .kpi.warn { border-top-color: var(--warn); } .kpi.bad { border-top-color: var(--bad); } .kpi.info { border-top-color: var(--info); }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .scroll { overflow: auto; max-height: 68vh; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th { position: sticky; top: 0; background: var(--surface-2); text-align: left; font-weight: 600; color: var(--ink-2);
+       padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; z-index: 1; }
+  td { padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.removed td { opacity: .5; text-decoration: line-through; }
+  tr.rowclick { cursor: pointer; } tr.rowclick:hover td { background: var(--muted-bg); }
+  .dim { color: var(--ink-3); } .small { font-size: 11.5px; }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; white-space: nowrap; margin: 1px 2px 1px 0; }
+  .p-ok { background: var(--ok-bg); color: var(--ok); } .p-warn { background: var(--warn-bg); color: var(--warn); }
+  .p-bad { background: var(--bad-bg); color: var(--bad); } .p-info { background: var(--info-bg); color: var(--info); }
+  .p-muted { background: var(--muted-bg); color: var(--ink-2); }
+  button.n { font: inherit; font-variant-numeric: tabular-nums; background: none; border: 0; padding: 1px 5px; margin: -1px -5px; border-radius: 5px;
+             color: var(--info); cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
+  button.n:hover { background: var(--info-bg); } button.n.over { color: var(--bad); font-weight: 700; } button.n.under { color: var(--ink-2); }
+  button.link { font: inherit; background: none; border: 0; padding: 0; color: var(--info); cursor: pointer; }
+  .acts { white-space: nowrap; } .acts button { font-size: 12px; padding: 2px 8px; }
+  .bar { position: relative; height: 10px; min-width: 110px; background: var(--muted-bg); border-radius: 3px; }
+  .bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--bar); border-radius: 0 4px 4px 0; }
+  .bar b { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--ink); }
+  .modal-bg { position: fixed; inset: 0; background: rgba(15,23,42,.55); display: flex; align-items: flex-start; justify-content: center; padding: 4vh 16px; z-index: 50; }
+  .modal-bg[hidden] { display: none; }
+  .modal { background: var(--surface); border-radius: 12px; width: min(1300px, 100%); max-height: 92vh; display: flex; flex-direction: column; box-shadow: 0 20px 50px rgba(0,0,0,.35); }
+  .modal.narrow { width: min(720px, 100%); }
+  .m-head { display: flex; justify-content: space-between; gap: 12px; padding: 14px 16px 10px; }
+  .m-head h3 { margin: 0; font-size: 16px; }
+  .m-body { overflow: auto; border-top: 1px solid var(--border); }
+  .form { padding: 14px 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; overflow: auto; }
+  .form label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--ink-2); }
+  .form .full { grid-column: 1 / -1; }
+  .form input:disabled, .form select:disabled { opacity: .7; }
+  .form input[type=search] { flex: none; max-width: none; min-width: 0; }
+  .m-foot { display: flex; gap: 8px; align-items: center; padding: 12px 16px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+  .err { color: var(--bad); font-size: 12.5px; font-weight: 600; }
+  .sugg { border: 1px solid var(--border); border-radius: 8px; max-height: 180px; overflow: auto; }
+  .sugg button { display: block; width: 100%; text-align: left; font: inherit; font-size: 12.5px; background: none; border: 0;
+                 border-bottom: 1px solid var(--border); padding: 6px 10px; color: var(--ink); cursor: pointer; }
+  .sugg button:hover { background: var(--muted-bg); }
+  .check { padding: 8px 10px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--border); font-size: 12.5px; }
+  .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); max-width: min(640px, calc(100% - 32px));
+           padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; z-index: 60; box-shadow: 0 8px 24px rgba(0,0,0,.2); }
+  .toast[hidden] { display: none; }
+  .t-ok { background: var(--ok-bg); color: var(--ok); } .t-bad { background: var(--bad-bg); color: var(--bad); } .t-warn { background: var(--warn-bg); color: var(--warn); }
+  .spin { display: inline-block; width: 11px; height: 11px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%;
+          animation: sp .8s linear infinite; vertical-align: -1px; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+  #loading { padding: 20vh 16px; text-align: center; color: var(--ink-2); }
+  .mx td, .mx th { text-align: right; } .mx td:first-child, .mx th:first-child { text-align: left; position: sticky; left: 0; background: var(--surface); }
+  .mx th:first-child { background: var(--surface-2); z-index: 2; } .mx .ap { color: var(--ink-3); font-size: 11px; }
+  @media (max-width: 700px) { .form { grid-template-columns: 1fr; } header { padding: 10px 16px; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="grow">
+    <h1 id="title">SST FTE Planning</h1>
+    <div class="who" id="who"></div>
+  </div>
+  <div class="hbtns">
+    <span id="refresh-msg"></span>
+    <button class="btn light" id="refresh" type="button" hidden>&#x21bb; Refresh ADP data</button>
+    <button class="btn light" id="reload" type="button" title="Reload the latest plan from the database">Reload</button>
+  </div>
+</header>
+<nav id="tabs">
+  <button data-tab="plan" class="on" type="button">Plan</button>
+  <button data-tab="summary" type="button">Summary</button>
+  <button data-tab="adp" type="button">ADP cross-check</button>
+  <button data-tab="log" type="button">Change log</button>
+  <button data-tab="access" type="button" hidden>Access</button>
+</nav>
+<div id="loading"><span class="spin"></span> Loading the plan…</div>
+<main hidden id="main">
+
+  <!-- PLAN -->
+  <section id="tab-plan">
+    <div class="toolbar">
+      <select id="p-campus" aria-label="Campus"></select>
+      <select id="p-title" aria-label="Job title"></select>
+      <select id="p-status" aria-label="Status">
+        <option value="ALL">All statuses</option><option>Returning</option><option>New hire</option><option>Not returning</option><option>Open</option>
+      </select>
+      <input type="search" id="p-q" placeholder="Search name, assignment, Position ID…">
+      <label class="chk"><input type="checkbox" id="p-issues"> ADP issues only</label>
+      <label class="chk admin-only" hidden><input type="checkbox" id="p-removed"> Show removed</label>
+      <button class="btn primary admin-only" id="p-add" type="button" hidden>+ Add position</button>
+      <button class="btn" id="p-export" type="button">Export CSV</button>
+    </div>
+    <div class="kpis" id="p-kpis"></div>
+    <div class="card scroll"><table id="p-table"></table></div>
+    <p class="sub" id="p-count" style="margin-top:6px"></p>
+  </section>
+
+  <!-- SUMMARY -->
+  <section id="tab-summary" hidden>
+    <h2>Campus summary</h2>
+    <p class="sub">Planned slots by status, compared with full-time staff active in ADP at each campus. Click any number for the list.</p>
+    <div class="card scroll" style="max-height:none"><table id="s-campus"></table></div>
+    <h2>Staffing by job title</h2>
+    <p class="sub">Planned slots vs. active in ADP for a job title or group.</p>
+    <div class="toolbar">
+      <select id="s-title" aria-label="Job title"></select>
+      <select id="s-region" aria-label="Region"><option value="ALL">All regions</option></select>
+      <select id="s-view" aria-label="View"><option value="campus">Totals per campus</option><option value="matrix">Campus × title matrix</option></select>
+    </div>
+    <div class="card scroll" style="max-height:none"><table id="s-jt"></table></div>
+    <p class="sub" id="s-legend" style="margin-top:6px"></p>
+  </section>
+
+  <!-- ADP CROSS-CHECK -->
+  <section id="tab-adp" hidden>
+    <p class="sub" id="a-meta"></p>
+    <div class="kpis" id="a-kpis"></div>
+    <h2>Overhire check by job title</h2>
+    <p class="sub">Full-time staff active in ADP per campus and job title vs. planned slots. Positive = more people in ADP than planned.</p>
+    <div class="toolbar"><label class="chk"><input type="checkbox" id="a-over-only" checked> Overhires only</label><span class="count" id="a-over-count"></span></div>
+    <div class="card scroll"><table id="a-over"></table></div>
+    <h2>All discrepancies</h2>
+    <div class="toolbar">
+      <select id="a-campus" aria-label="Campus"></select>
+      <select id="a-issue" aria-label="Issue"></select>
+      <input type="search" id="a-q" placeholder="Search…">
+      <button class="btn" id="a-export" type="button">Export CSV</button>
+      <span class="count" id="a-count"></span>
+    </div>
+    <div class="card scroll"><table id="a-table"></table></div>
+  </section>
+
+  <!-- CHANGE LOG -->
+  <section id="tab-log" hidden>
+    <p class="sub">Every change made through the portal, newest first. The log is append-only: entries cannot be edited from the portal.</p>
+    <div class="toolbar">
+      <select id="l-campus" aria-label="Campus"></select>
+      <select id="l-user" aria-label="User"></select>
+      <select id="l-action" aria-label="Action"></select>
+      <label class="chk">From <input type="date" id="l-from"></label>
+      <label class="chk">To <input type="date" id="l-to"></label>
+      <input type="search" id="l-q" placeholder="Search…">
+      <button class="btn" id="l-export" type="button">Export CSV</button>
+      <span class="count" id="l-count"></span>
+    </div>
+    <div class="card scroll"><table id="l-table"></table></div>
+  </section>
+
+  <!-- ACCESS -->
+  <section id="tab-access" hidden>
+    <p class="sub">Who can use the portal. <b>Admins</b> add and remove position slots and manage access. <b>Editors</b> fill slots
+      (people, status, Position ID, notes) at their campuses. <b>Viewers</b> read only. The script owner is always an admin.</p>
+    <div class="toolbar"><button class="btn primary" id="x-add" type="button">+ Add person</button></div>
+    <div class="card scroll"><table id="x-table"></table></div>
+  </section>
+</main>
+
+<!-- position editor -->
+<div class="modal-bg" id="pe" hidden>
+  <div class="modal narrow" role="dialog" aria-modal="true" aria-labelledby="pe-title">
+    <div class="m-head"><div><h3 id="pe-title"></h3><p class="sub" id="pe-sub" style="margin:2px 0 0"></p></div>
+      <button class="btn" data-close="pe" type="button" aria-label="Close">&#x2715;</button></div>
+    <div class="form">
+      <label>Campus<select id="pe-campus"></select></label>
+      <label>Job title<select id="pe-job"></select></label>
+      <label class="full">Assignment (grade / subject / notes on the role)<input id="pe-assignment" maxlength="200"></label>
+      <label>Status<select id="pe-status"><option>Returning</option><option>New hire</option><option>Not returning</option><option>Open</option></select></label>
+      <label>ADP Position ID<input id="pe-pid" maxlength="20" placeholder="e.g. ELA110850"></label>
+      <label>First name<input id="pe-first" maxlength="60"></label>
+      <label>Last name<input id="pe-last" maxlength="60"></label>
+      <div class="full" id="pe-find-wrap">
+        <label>Find the person in ADP<input type="search" id="pe-find" placeholder="Type a name or Position ID to fill the fields from ADP"></label>
+        <div class="sugg" id="pe-sugg" hidden></div>
+      </div>
+      <label class="full">Notes<textarea id="pe-notes" rows="2" maxlength="1000"></textarea></label>
+      <label class="full">Reason for this change (saved in the change log)<input id="pe-note" maxlength="300" placeholder="Optional, e.g. offer accepted 6/12"></label>
+      <div class="full check" id="pe-check"></div>
+    </div>
+    <div class="m-foot">
+      <button class="btn primary" id="pe-save" type="button">Save</button>
+      <button class="btn" data-close="pe" type="button">Cancel</button>
+      <span class="err" id="pe-err"></span>
+    </div>
+  </div>
+</div>
+
+<!-- remove / restore -->
+<div class="modal-bg" id="rm" hidden>
+  <div class="modal narrow" role="dialog" aria-modal="true" aria-labelledby="rm-title">
+    <div class="m-head"><div><h3 id="rm-title"></h3><p class="sub" id="rm-sub" style="margin:2px 0 0"></p></div>
+      <button class="btn" data-close="rm" type="button" aria-label="Close">&#x2715;</button></div>
+    <div class="form"><label class="full">Reason (required, saved in the change log)<input id="rm-note" maxlength="300"></label></div>
+    <div class="m-foot"><button class="btn primary" id="rm-go" type="button"></button>
+      <button class="btn" data-close="rm" type="button">Cancel</button><span class="err" id="rm-err"></span></div>
+  </div>
+</div>
+
+<!-- access editor -->
+<div class="modal-bg" id="xe" hidden>
+  <div class="modal narrow" role="dialog" aria-modal="true" aria-labelledby="xe-title">
+    <div class="m-head"><h3 id="xe-title">Access</h3><button class="btn" data-close="xe" type="button" aria-label="Close">&#x2715;</button></div>
+    <div class="form">
+      <label>Email<input id="xe-email" type="email" placeholder="name@ssttx.org"></label>
+      <label>Name<input id="xe-name"></label>
+      <label>Role<select id="xe-role"><option value="editor">Editor</option><option value="viewer">Viewer</option><option value="admin">Admin</option></select></label>
+      <label>Campuses<input id="xe-campuses" placeholder="ALL, or codes like ALM, DIS"></label>
+      <p class="sub full" id="xe-codes"></p>
+    </div>
+    <div class="m-foot"><button class="btn primary" id="xe-save" type="button">Save</button>
+      <button class="btn" data-close="xe" type="button">Cancel</button><span class="err" id="xe-err"></span></div>
+  </div>
+</div>
+
+<!-- details / history -->
+<div class="modal-bg" id="dm" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="dm-title">
+    <div class="m-head"><div><h3 id="dm-title"></h3><p class="sub" id="dm-sub" style="margin:2px 0 0"></p></div>
+      <button class="btn" data-close="dm" type="button" aria-label="Close">&#x2715;</button></div>
+    <div class="toolbar" style="padding:0 16px"><input type="search" id="dm-q" placeholder="Search in this list…">
+      <button class="btn" id="dm-export" type="button">Export CSV</button><span class="count" id="dm-count"></span></div>
+    <div class="m-body"><table id="dm-table"></table></div>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/* ================================================================ state & helpers */
+let DB = null;            // bootstrap payload from the server
+let CHK = null;           // cross-check results (recomputed after every change)
+let LOG = null;           // change log (loaded on demand)
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const fmt = n => Number(n).toLocaleString();
+const isAdmin = () => DB.user.role === "admin";
+const canEdit = code => DB.user.role === "admin" || (DB.user.role === "editor" && (DB.user.campuses.includes("ALL") || DB.user.campuses.includes(code)));
+const campusName = code => (DB.campuses.find(c => c.code === code) || {}).name || code;
+const titleOf = code => (DB.jobTitles.find(t => t.job_code === code) || {}).title || "";
+const groupOf = code => (DB.jobTitles.find(t => t.job_code === code) || {}).group || "Other";
+const person = p => [p.first_name, p.last_name].filter(Boolean).join(" ");
+const livePositions = () => DB.positions.filter(p => !p.deleted);
+
+function call(fn, ...args) {
+  return new Promise((resolve, reject) =>
+    google.script.run.withSuccessHandler(resolve).withFailureHandler(e => reject(new Error(e && e.message || e)))[fn](...args));
+}
+function toast(msg, kind = "ok") {
+  const t = $("toast"); t.textContent = msg; t.className = `toast t-${kind}`; t.hidden = false;
+  clearTimeout(toast.h); toast.h = setTimeout(() => t.hidden = true, 6000);
+}
+function openM(id) { $(id).hidden = false; document.body.style.overflow = "hidden"; }
+function closeM(id) { $(id).hidden = true; if ([...document.querySelectorAll(".modal-bg")].every(m => m.hidden)) document.body.style.overflow = ""; }
+const num = (v, d, cls = "") => (v === 0 || v === "0") ? `<span class="dim">0</span>`
+  : `<button class="n ${cls}" type="button" data-d="${esc(d)}">${esc(v)}</button>`;
+function downloadCsv(name, cols, rows) {
+  const cell = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const csv = [cols.map(c => cell(c[1])).join(",")].concat(rows.map(r => cols.map(c => cell(typeof c[0] === "function" ? c[0](r) : r[c[0]])).join(","))).join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+  a.download = name.replace(/[^\w.-]+/g, "_"); a.click();
+}
+
+/* ================================================================ ADP cross-check engine */
+const SUBPT_CODES = new Set(["11SUB", "11TA"]), SUBPT_TYPES = new Set(["Part Time", "On-Call Substitute"]);
+const CHECK = {
+  MATCH:        { label: "Matches ADP", cls: "p-ok" },
+  LOCATION:     { label: "Location differs", cls: "p-warn", issue: 1 },
+  TITLE:        { label: "Title differs", cls: "p-warn", issue: 1 },
+  NAME:         { label: "Name differs", cls: "p-info", issue: 1 },
+  NOT_ACTIVE:   { label: "Terminated in ADP", cls: "p-bad", issue: 1 },
+  NOT_IN_ADP:   { label: "Not found in ADP", cls: "p-bad", issue: 1 },
+  NOT_YET:      { label: "New hire – not in ADP yet", cls: "p-info" },
+  LEFT:         { label: "Left ADP (not returning)", cls: "p-muted" },
+  DUPLICATE:    { label: "Same person twice", cls: "p-warn", issue: 1 },
+  OPEN:         { label: "Open slot", cls: "p-muted" },
+  NOT_IN_PLAN:  { label: "In ADP, not in plan", cls: "p-bad", issue: 1 },
+};
+const tokens = s => String(s || "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().split(/[^a-z]+/).filter(Boolean);
+const meets = (a, b) => [...a].some(x => b.has(x));
+function namesMatch(f1, l1, w) {
+  const f2 = w._first, l2 = w._last;
+  if (!l1.size || !l2.size || !meets(l1, l2)) return meets(f1, l2) && meets(l1, f2);
+  if (!f1.size || !f2.size) return false;
+  if (meets(f1, f2)) return true;
+  return [...f1].some(a => [...f2].some(b => Math.min(a.length, b.length) >= 3 && Math.abs(a.length - b.length) >= 2 && (a.startsWith(b) || b.startsWith(a))));
+}
+const wName = w => `${w.given} ${w.family}`.trim();
+
+function buildAdp() {
+  const H = DB.adp.headers;
+  DB.adpWorkers = DB.adp.rows.map(r => {
+    const w = {}; H.forEach((h, i) => w[h] = r[i]);
+    w._first = new Set([...tokens(w.given), ...tokens(w.preferred_given), ...tokens(w.middle)]);
+    w._last = new Set(tokens(w.family));
+    w._pids = new Set(String(w.all_position_ids || "").split(",").filter(Boolean));
+    w._active = w.status === "Active";
+    w._subpt = SUBPT_CODES.has(w.job_code) || SUBPT_TYPES.has(w.worker_type);
+    return w;
+  });
+}
+
+function crossCheck() {
+  const workers = DB.adpWorkers, byPid = new Map(), codes = new Set(DB.campuses.map(c => c.code));
+  workers.forEach(w => w._pids.forEach(pid => { if (!byPid.has(pid) || w._active) byPid.set(pid, w); }));
+  const active = workers.filter(w => w._active);
+  const byPos = new Map(), claims = new Map();
+
+  for (const p of livePositions()) {
+    const r = { code: "OPEN", issues: [], notes: [], w: null };
+    byPos.set(p.position_key, r);
+    if (p.status === "Open") continue;
+    const f = new Set(tokens(p.first_name)), l = new Set(tokens(p.last_name));
+    let w = p.adp_position_id ? byPid.get(p.adp_position_id) : null, nameDiff = false;
+    if (w && !namesMatch(f, l, w)) {
+      if (meets(f, w._first)) nameDiff = true;
+      else { r.notes.push(`Position ID ${p.adp_position_id} belongs to ${wName(w)} in ADP`); w = null; }
+    }
+    if (!w || !w._active) {
+      let c = active.filter(x => namesMatch(f, l, x));
+      if (c.length > 1) c = c.filter(x => x.location_code === p.campus_code).length ? c.filter(x => x.location_code === p.campus_code) : c;
+      if (c.length === 1) { if (w) r.notes.push("Old Position ID is terminated; person is active under a new one"); w = c[0]; nameDiff = false; }
+    }
+    r.w = w;
+    if (!w) { r.code = p.status === "New hire" ? "NOT_YET" : "NOT_IN_ADP"; if (r.code === "NOT_IN_ADP") r.issues.push(r.code); continue; }
+    if (!w._active) {
+      r.code = p.status === "Not returning" ? "LEFT" : "NOT_ACTIVE";
+      if (r.code === "NOT_ACTIVE") { r.issues.push(r.code); r.notes.push(`${w.status} in ADP${w.termination_date ? " since " + w.termination_date : ""}`); }
+      continue;
+    }
+    if (w.location_code !== p.campus_code) r.issues.push("LOCATION");
+    if (w.job_code !== p.job_code || w._subpt) r.issues.push("TITLE");
+    if (w._subpt) r.notes.push(`ADP shows ${w.worker_type || w.job_code}`);
+    if (nameDiff) { r.issues.push("NAME"); r.notes.push(`ADP name: ${wName(w)}`); }
+    if (!p.adp_position_id) r.notes.push(`ADP Position ID: ${w.position_id}`);
+    else if (p.adp_position_id !== w.position_id) r.notes.push(`ADP Position ID is now ${w.position_id}`);
+    r.code = r.issues[0] || "MATCH";
+    if (!w._subpt) { if (!claims.has(w.worker_id)) claims.set(w.worker_id, []); claims.get(w.worker_id).push(p); }
+  }
+
+  // One ADP person fills one slot; extra slots claiming the same person are flagged
+  claims.forEach(list => {
+    if (list.length < 2) return;
+    const score = p => { const r = byPos.get(p.position_key); return (r.issues.includes("LOCATION") ? 2 : 0) + (r.issues.includes("TITLE") ? 1 : 0); };
+    list.sort((a, b) => score(a) - score(b));
+    list.slice(1).forEach(p => {
+      const r = byPos.get(p.position_key);
+      r.code = "DUPLICATE"; r.issues = ["DUPLICATE"]; r.notes = [`Same ADP person also fills ${list[0].position_key} (${campusName(list[0].campus_code)})`]; r.dup = true;
+    });
+  });
+
+  const claimed = new Set([...claims.keys()]);
+  const slotOf = new Map();
+  claims.forEach((list, wid) => slotOf.set(wid, list[0]));
+  const counted = active.filter(w => !w._subpt && codes.has(w.location_code));
+  const notInPlan = counted.filter(w => !claimed.has(w.worker_id));
+
+  // Planned slots vs ADP headcount per campus + job title
+  const tc = new Map(), key = (c, j) => c + "|" + j;
+  const cell = (c, j) => { const k = key(c, j); if (!tc.has(k)) tc.set(k, { campus: c, job: j, slots: 0, adp: 0 }); return tc.get(k); };
+  livePositions().forEach(p => cell(p.campus_code, p.job_code).slots++);
+  counted.forEach(w => cell(w.location_code, w.job_code).adp++);
+  const titleCounts = [...tc.values()].map(t => Object.assign(t, { diff: t.adp - t.slots }));
+  CHK = { byPos, notInPlan, counted, titleCounts, slotOf };
+}
+
+/* ================================================================ bootstrap */
+async function load(quiet) {
+  try {
+    DB = await call("getBootstrap");
+    buildAdp(); crossCheck();
+    if (!quiet) setupUi();
+    renderAll();
+    $("loading").hidden = true; $("main").hidden = false;
+  } catch (e) {
+    $("loading").innerHTML = `<p class="err">Could not load the plan: ${esc(e.message)}</p>`;
+  }
+}
+
+function setupUi() {
+  document.title = `SST ${DB.schoolYear} FTE Planning`;
+  $("title").textContent = `SST ${DB.schoolYear} FTE Planning`;
+  $("who").textContent = `${DB.user.name} · ${DB.user.email} · ${DB.user.role}` +
+    (DB.user.role === "editor" && !DB.user.campuses.includes("ALL") ? ` (${DB.user.campuses.join(", ")})` : "");
+  document.querySelectorAll(".admin-only").forEach(e => e.hidden = !isAdmin());
+  document.querySelector('[data-tab="access"]').hidden = !isAdmin();
+  $("refresh").hidden = DB.user.role === "viewer";
+
+  const campusOpts = (all = true) => (all ? `<option value="ALL">All campuses</option>` : "") +
+    DB.campuses.map(c => `<option value="${esc(c.code)}">${esc(c.name)}</option>`).join("");
+  $("p-campus").innerHTML = campusOpts();
+  const mine = DB.user.campuses.filter(c => c !== "ALL");
+  if (DB.user.role === "editor" && mine.length === 1) $("p-campus").value = mine[0];
+  $("a-campus").innerHTML = campusOpts(); $("l-campus").innerHTML = campusOpts();
+  $("pe-campus").innerHTML = campusOpts(false);
+  $("pe-job").innerHTML = groupedTitles(false);
+  $("p-title").innerHTML = groupedTitles(true); $("s-title").innerHTML = groupedTitles(true); $("s-title").value = "G:Teachers";
+  const regions = [...new Set(DB.campuses.map(c => c.region))];
+  $("s-region").innerHTML += regions.map(r => `<option>${esc(r)}</option>`).join("");
+  $("a-issue").innerHTML = [["ANY", "Any discrepancy"], ...Object.entries(CHECK).filter(([, v]) => v.issue).map(([k, v]) => [k, v.label]), ["ALL", "All positions + ADP"]]
+    .map(([k, l]) => `<option value="${k}">${esc(l)}</option>`).join("");
+  $("xe-codes").textContent = "Campus codes: " + DB.campuses.map(c => `${c.code} = ${c.name}`).join(" · ");
+}
+
+function groupedTitles(withAll) {
+  const groups = [...new Set(DB.jobTitles.map(t => t.group))];
+  const ind = DB.jobTitles.slice().sort((a, b) => a.job_code.localeCompare(b.job_code))
+    .map(t => `<option value="${esc(t.job_code)}">${esc(t.job_code)} - ${esc(t.title)}</option>`).join("");
+  if (!withAll) return ind;
+  return `<option value="ALL">All job titles</option><optgroup label="Groups">${groups.map(g => `<option value="G:${esc(g)}">${esc(g)}</option>`).join("")}</optgroup>` +
+    `<optgroup label="Individual titles">${ind}</optgroup>`;
+}
+const titleFilter = v => v === "ALL" ? () => true : v.startsWith("G:") ? code => groupOf(code) === v.slice(2) : code => code === v;
+
+function renderAll() {
+  renderPlan(); renderSummary(); renderAdp();
+  $("refresh-msg").textContent = refreshBusy ? $("refresh-msg").textContent : `ADP data from ${DB.adp.pulledAt || "—"}`;
+  if (isAdmin()) renderAccess();
+  if (LOG && !$("tab-log").hidden) renderLog();
+}
+
+/* ================================================================ PLAN tab */
+function planRows() {
+  const c = $("p-campus").value, tf = titleFilter($("p-title").value), st = $("p-status").value, q = $("p-q").value.toLowerCase();
+  const onlyIssues = $("p-issues").checked, showRemoved = isAdmin() && $("p-removed").checked;
+  return DB.positions.filter(p => (showRemoved || !p.deleted) && (c === "ALL" || p.campus_code === c) && tf(p.job_code)
+    && (st === "ALL" || p.status === st) && (!onlyIssues || (CHK.byPos.get(p.position_key) || { issues: [] }).issues.length)
+    && (!q || [person(p), p.assignment, p.adp_position_id, p.notes, p.position_key, titleOf(p.job_code)].some(v => String(v || "").toLowerCase().includes(q))))
+    .sort((a, b) => a.campus_code.localeCompare(b.campus_code) || a.job_code.localeCompare(b.job_code) || String(a.assignment).localeCompare(String(b.assignment)));
+}
+
+function checkCell(p) {
+  const r = CHK.byPos.get(p.position_key);
+  if (!r) return "";
+  const pills = (r.issues.length ? r.issues : [r.code]).map(k => `<span class="pill ${CHECK[k].cls}">${CHECK[k].label}</span>`).join("");
+  const w = r.w, bits = [];
+  if (w && r.issues.includes("LOCATION")) bits.push(`ADP location: ${esc(campusName(w.location_code) || w.location_name)}`);
+  if (w && r.issues.includes("TITLE")) bits.push(`ADP title: ${esc(w.job_code)} - ${esc(w.job_title)}`);
+  return pills + (bits.concat(r.notes.map(esc)).length ? `<div class="small dim">${bits.concat(r.notes.map(esc)).join("<br>")}</div>` : "");
+}
+
+const STATUS_CLS = { Returning: "p-ok", "New hire": "p-info", "Not returning": "p-warn", Open: "p-muted" };
+
+function renderPlan() {
+  const rows = planRows(), c = $("p-campus").value;
+  const live = rows.filter(p => !p.deleted), cnt = s => live.filter(p => p.status === s).length;
+  const adpHere = CHK.counted.filter(w => (c === "ALL" || w.location_code === c) && titleFilter($("p-title").value)(w.job_code)).length;
+  const issues = live.filter(p => CHK.byPos.get(p.position_key).issues.length).length;
+  const tiles = [["Slots", live.length, "planned positions", ""], ["Returning", cnt("Returning"), "", "ok"], ["New hire", cnt("New hire"), "", "info"],
+    ["Not returning", cnt("Not returning"), "slot opens up", "warn"], ["Open", cnt("Open"), "to hire", "warn"],
+    ["Active in ADP", adpHere, "full-time, this selection", ""], ["ADP issues", issues, "in this selection", "bad"]];
+  $("p-kpis").innerHTML = tiles.map(([l, v, h, cls]) => `<div class="kpi ${cls}" style="cursor:default"><div class="lbl">${l}</div><div class="val">${fmt(v)}</div><div class="hint">${h}</div></div>`).join("");
+  const shown = rows.slice(0, 1500);
+  $("p-table").innerHTML = `<thead><tr>${c === "ALL" ? "<th>Campus</th>" : ""}<th>Job title</th><th>Assignment</th><th>Person</th><th>ADP Position ID</th>
+      <th>Status</th><th>ADP check</th><th>Last change</th><th></th></tr></thead><tbody>` +
+    (shown.map(p => `<tr class="rowclick ${p.deleted ? "removed" : ""}" data-edit="${esc(p.position_key)}">
+      ${c === "ALL" ? `<td>${esc(campusName(p.campus_code))}</td>` : ""}
+      <td>${esc(p.job_code)}<div class="small dim">${esc(titleOf(p.job_code))}</div></td>
+      <td>${esc(p.assignment)}</td><td><b>${esc(person(p)) || '<span class="dim">—</span>'}</b>${p.notes ? `<div class="small dim">${esc(p.notes)}</div>` : ""}</td>
+      <td>${esc(p.adp_position_id)}</td><td><span class="pill ${STATUS_CLS[p.status] || "p-muted"}">${esc(p.status)}</span></td>
+      <td>${p.deleted ? '<span class="pill p-muted">Removed</span>' : checkCell(p)}</td>
+      <td class="small dim">${esc(p.updated_at)}<br>${esc(p.updated_by)}</td>
+      <td class="acts"><button class="btn" data-hist="${esc(p.position_key)}" type="button">History</button>
+        ${isAdmin() ? (p.deleted ? `<button class="btn" data-restore="${esc(p.position_key)}" type="button">Restore</button>`
+          : `<button class="btn" data-copy="${esc(p.position_key)}" type="button" title="Add another slot like this">Copy</button>
+             <button class="btn danger" data-remove="${esc(p.position_key)}" type="button">Remove</button>`) : ""}</td></tr>`).join("")
+      || `<tr><td colspan="9" class="dim">No positions match these filters.</td></tr>`) + "</tbody>";
+  $("p-count").textContent = `${fmt(rows.length)} positions shown${rows.length > shown.length ? ` (first ${shown.length} listed; narrow the filters)` : ""}. ` +
+    (DB.user.role === "viewer" ? "Read-only access." : "Click a row to edit.");
+}
+
+/* ---------- position editor */
+let editing = null;
+function openEditor(p, copy) {
+  editing = copy ? null : p;
+  const newSlot = !p || copy, ro = !newSlot && (!canEdit(p.campus_code) || p.deleted);
+  $("pe-title").textContent = newSlot ? "Add position slot" : ro ? "Position details" : "Edit position";
+  $("pe-sub").textContent = newSlot ? "New approved slot for " + DB.schoolYear : `${p.position_key} · last changed ${p.updated_at} by ${p.updated_by}`;
+  const v = p || {};
+  $("pe-campus").value = v.campus_code || ($("p-campus").value !== "ALL" ? $("p-campus").value : DB.campuses[0].code);
+  $("pe-job").value = v.job_code || "11TEACH";
+  $("pe-assignment").value = v.assignment || "";
+  $("pe-status").value = copy ? "Open" : v.status || "Open";
+  $("pe-first").value = copy ? "" : v.first_name || ""; $("pe-last").value = copy ? "" : v.last_name || "";
+  $("pe-pid").value = copy ? "" : v.adp_position_id || ""; $("pe-notes").value = copy ? "" : v.notes || "";
+  $("pe-note").value = ""; $("pe-find").value = ""; $("pe-sugg").hidden = true; $("pe-err").textContent = "";
+  $("pe-campus").disabled = $("pe-job").disabled = ro || !isAdmin();
+  ["pe-assignment", "pe-status", "pe-first", "pe-last", "pe-pid", "pe-notes", "pe-note", "pe-find"].forEach(id => $(id).disabled = ro);
+  $("pe-save").hidden = ro;
+  syncStatus(); previewCheck(); openM("pe");
+}
+function syncStatus() {
+  const open = $("pe-status").value === "Open";
+  ["pe-first", "pe-last", "pe-pid", "pe-find"].forEach(id => { if (!$("pe-save").hidden) $(id).disabled = open; });
+  $("pe-find-wrap").style.opacity = open ? .5 : 1;
+}
+function formPosition() {
+  return { campus_code: $("pe-campus").value, job_code: $("pe-job").value, assignment: $("pe-assignment").value, status: $("pe-status").value,
+    first_name: $("pe-first").value.trim(), last_name: $("pe-last").value.trim(), adp_position_id: $("pe-pid").value.trim().toUpperCase(),
+    notes: $("pe-notes").value, position_key: editing ? editing.position_key : "__preview" };
+}
+function previewCheck() {
+  const p = formPosition();
+  if (p.status === "Open") { $("pe-check").innerHTML = '<span class="pill p-muted">Open slot</span> <span class="dim">No person to check against ADP.</span>'; return; }
+  // Run the engine on this one draft position
+  const saved = DB.positions; DB.positions = saved.filter(x => x.position_key !== p.position_key).concat([p]);
+  const before = CHK; crossCheck(); const html = checkCell(p); CHK = before; DB.positions = saved;
+  $("pe-check").innerHTML = "<b>ADP check:</b> " + html;
+}
+function suggest() {
+  const q = $("pe-find").value.trim().toLowerCase();
+  if (q.length < 2) { $("pe-sugg").hidden = true; return; }
+  const hits = DB.adpWorkers.filter(w => w._active && (wName(w).toLowerCase().includes(q) || [...w._pids].some(x => x.toLowerCase().includes(q))
+    || `${w.preferred_given} ${w.family}`.toLowerCase().includes(q))).slice(0, 30);
+  $("pe-sugg").innerHTML = hits.map(w => `<button type="button" data-w="${esc(w.worker_id)}"><b>${esc(wName(w))}</b> · ${esc(w.position_id)} · ${esc(w.job_code)} - ${esc(w.job_title)} · ${esc(campusName(w.location_code) || w.location_name)}${w._subpt ? ` · ${esc(w.worker_type)}` : ""}</button>`).join("")
+    || `<div class="dim small" style="padding:8px 10px">No active ADP staff match.</div>`;
+  $("pe-sugg").hidden = false;
+}
+async function savePosition() {
+  const p = formPosition();
+  if (!editing) delete p.position_key;
+  else Object.assign(p, { position_key: editing.position_key, expected_updated_at: editing.updated_at });
+  p.change_note = $("pe-note").value;
+  $("pe-save").disabled = true; $("pe-err").textContent = "";
+  try {
+    const rec = await call("savePosition", p);
+    const i = DB.positions.findIndex(x => x.position_key === rec.position_key);
+    if (i >= 0) DB.positions[i] = rec; else DB.positions.push(rec);
+    LOG = null; crossCheck(); renderAll(); closeM("pe");
+    toast(editing ? `Saved ${rec.position_key}` : `Added ${rec.position_key}`);
+  } catch (e) { $("pe-err").textContent = e.message; }
+  finally { $("pe-save").disabled = false; }
+}
+
+/* ---------- remove / restore */
+let rmTarget = null, rmMode = "";
+function openRemove(p, mode) {
+  rmTarget = p; rmMode = mode;
+  $("rm-title").textContent = mode === "remove" ? "Remove position slot" : "Restore position slot";
+  $("rm-sub").textContent = `${p.position_key} · ${campusName(p.campus_code)} · ${p.job_code} ${p.assignment || ""} · ${person(p) || "open"}`;
+  $("rm-go").textContent = mode === "remove" ? "Remove slot" : "Restore slot";
+  $("rm-go").className = "btn " + (mode === "remove" ? "danger" : "primary");
+  $("rm-note").value = ""; $("rm-err").textContent = ""; openM("rm"); $("rm-note").focus();
+}
+async function doRemove() {
+  const note = $("rm-note").value.trim();
+  if (!note) { $("rm-err").textContent = "Please give a reason."; return; }
+  $("rm-go").disabled = true;
+  try {
+    const rec = rmMode === "remove" ? await call("deletePosition", rmTarget.position_key, rmTarget.updated_at, note)
+                                    : await call("restorePosition", rmTarget.position_key, note);
+    DB.positions[DB.positions.findIndex(x => x.position_key === rec.position_key)] = rec;
+    LOG = null; crossCheck(); renderAll(); closeM("rm"); toast(`${rmMode === "remove" ? "Removed" : "Restored"} ${rec.position_key}`);
+  } catch (e) { $("rm-err").textContent = e.message; }
+  finally { $("rm-go").disabled = false; }
+}
+
+/* ---------- history */
+async function openHistory(key) {
+  const p = DB.positions.find(x => x.position_key === key);
+  showDetail({ title: `History · ${key}`, sub: `${campusName(p.campus_code)} · ${p.job_code} ${p.assignment || ""} · ${person(p) || "open slot"}`, kind: "log", rows: [] });
+  $("dm-count").innerHTML = '<span class="spin"></span> loading';
+  try { detail.rows = await call("getChangeLog", { position_key: key }); renderDetail(); }
+  catch (e) { $("dm-count").textContent = e.message; }
+}
+
+/* ================================================================ SUMMARY tab */
+function renderSummary() {
+  const live = livePositions();
+  const heads = ["Campus", "Region", "Slots", "Returning", "New hire", "Not returning", "Open", "Active in ADP", "Diff", "ADP issues", "Not in plan", "Overhire"];
+  const row = (label, region, code, bold) => {
+    const inC = x => code === "ALL" || x === code;
+    const ps = live.filter(p => inC(p.campus_code)), cnt = s => ps.filter(p => p.status === s).length;
+    const adpN = CHK.counted.filter(w => inC(w.location_code)).length, d = adpN - ps.length;
+    const iss = ps.filter(p => CHK.byPos.get(p.position_key).issues.length).length;
+    const nip = CHK.notInPlan.filter(w => inC(w.location_code)).length;
+    const over = CHK.titleCounts.filter(t => inC(t.campus)).reduce((a, t) => a + Math.max(t.diff, 0), 0);
+    const B = s => bold ? `<b>${s}</b>` : s;
+    return `<tr><td>${B(label)}</td><td>${esc(region)}</td>
+      <td class="num">${B(num(ps.length, `pos:${code}:ALL`))}</td><td class="num">${num(cnt("Returning"), `pos:${code}:Returning`)}</td>
+      <td class="num">${num(cnt("New hire"), `pos:${code}:New hire`)}</td><td class="num">${num(cnt("Not returning"), `pos:${code}:Not returning`)}</td>
+      <td class="num">${num(cnt("Open"), `pos:${code}:Open`)}</td><td class="num">${B(num(adpN, `adp:${code}:ALL`))}</td>
+      <td class="num">${num((d > 0 ? "+" : "") + d, `tc:${code}:ALL`, d > 0 ? "over" : "under")}</td>
+      <td class="num">${num(iss, `iss:${code}:ANY`)}</td><td class="num">${num(nip, `nip:${code}`, "over")}</td>
+      <td class="num">${num(over ? "+" + over : 0, `tc:${code}:OVER`, "over")}</td></tr>`;
+  };
+  $("s-campus").innerHTML = `<thead><tr>${heads.map((h, i) => `<th class="${i > 1 ? "num" : ""}">${h}</th>`).join("")}</tr></thead><tbody>` +
+    DB.campuses.map(c => row(`<b>${esc(c.name)}</b> <span class="dim">(${esc(c.code)})</span>`, c.region, c.code)).join("") +
+    row("All campuses", "", "ALL", true) + "</tbody>";
+  renderJobTitles();
+}
+
+function renderJobTitles() {
+  const tf = titleFilter($("s-title").value), region = $("s-region").value;
+  const camps = DB.campuses.filter(c => region === "ALL" || c.region === region);
+  const codes = [...new Set(DB.jobTitles.map(t => t.job_code).concat(CHK.titleCounts.map(t => t.job)))].filter(tf);
+  const get = (c, j) => CHK.titleCounts.find(t => t.campus === c && t.job === j) || { slots: 0, adp: 0 };
+  const scope = camps.length === DB.campuses.length ? "ALL" : camps.map(c => c.code).join("+");
+  if ($("s-view").value === "matrix") {
+    const cols = codes.filter(j => camps.some(c => { const t = get(c.code, j); return t.slots || t.adp; }));
+    $("s-jt").className = "mx";
+    $("s-jt").innerHTML = `<thead><tr><th>Campus</th>${cols.map(j => `<th style="white-space:normal;min-width:90px">${esc(j)}<div class="ap" style="font-weight:400">${esc(titleOf(j).toLowerCase())}</div></th>`).join("")}</tr></thead><tbody>` +
+      camps.map(c => `<tr><td><b>${esc(c.name)}</b></td>${cols.map(j => { const t = get(c.code, j);
+        return (t.slots || t.adp) ? `<td>${num(t.adp, `adp:${c.code}:${j}`, t.adp > t.slots ? "over" : "")}<div class="ap">of ${num(t.slots, `pos:${c.code}:ALL:${j}`)}</div></td>` : `<td class="dim">·</td>`; }).join("")}</tr>`).join("") + "</tbody>";
+    $("s-legend").textContent = "Each cell: full-time staff active in ADP, with planned slots underneath (“of N”). Red = more in ADP than planned.";
+    return;
+  }
+  const rows = camps.map(c => ({ c, slots: codes.reduce((a, j) => a + get(c.code, j).slots, 0), adp: codes.reduce((a, j) => a + get(c.code, j).adp, 0) }));
+  const max = Math.max(1, ...rows.map(r => Math.max(r.slots, r.adp)));
+  const T = rows.reduce((a, r) => ({ slots: a.slots + r.slots, adp: a.adp + r.adp }), { slots: 0, adp: 0 });
+  const jk = $("s-title").value;
+  const line = (label, reg, code, s, a, bold) => { const d = a - s;
+    return `<tr><td>${bold ? `<b>${label}</b>` : label}</td><td>${esc(reg)}</td><td class="num">${num(s, `pos:${code}:ALL:${jk}`)}</td>
+      <td class="num">${num(a, `adp:${code}:${jk}`)}</td><td class="num">${num((d > 0 ? "+" : "") + d, `tc:${code}:${jk}`, d > 0 ? "over" : "under")}</td>
+      <td>${bold ? "" : `<div class="bar" title="${a} in ADP, ${s} planned"><i style="width:${a / max * 100}%"></i><b style="left:calc(${s / max * 100}% - 1px)"></b></div>`}</td></tr>`; };
+  $("s-jt").className = "";
+  $("s-jt").innerHTML = `<thead><tr><th>Campus</th><th>Region</th><th class="num">Planned slots</th><th class="num">Active in ADP</th><th class="num">Difference</th><th style="width:28%">ADP vs. planned</th></tr></thead><tbody>` +
+    rows.map(r => line(`<b>${esc(r.c.name)}</b>`, r.c.region, r.c.code, r.slots, r.adp)).join("") + line("All shown campuses", "", scope, T.slots, T.adp, true) + "</tbody>";
+  $("s-legend").textContent = "Bar = full-time staff active in ADP; black tick = planned slots.";
+}
+
+/* ================================================================ ADP tab */
+function adpIssueRows() {
+  const c = $("a-campus").value, f = $("a-issue").value, q = $("a-q").value.toLowerCase();
+  const inC = x => c === "ALL" || x === c;
+  const pos = livePositions().filter(p => inC(p.campus_code)).map(p => ({ p, r: CHK.byPos.get(p.position_key) }))
+    .filter(({ r }) => f === "ALL" || (f === "ANY" ? r.issues.length : r.issues.includes(f)));
+  const nip = (f === "ALL" || f === "ANY" || f === "NOT_IN_PLAN") ? CHK.notInPlan.filter(w => inC(w.location_code)).map(w => ({ w })) : [];
+  return pos.concat(nip).filter(x => !q || JSON.stringify([x.p && person(x.p), x.p && x.p.assignment, x.p && x.p.adp_position_id, x.w && wName(x.w), x.r && x.r.w && wName(x.r.w)]).toLowerCase().includes(q));
+}
+
+function renderAdp() {
+  const live = livePositions(), n = k => live.filter(p => CHK.byPos.get(p.position_key).issues.includes(k)).length;
+  const code = k => live.filter(p => CHK.byPos.get(p.position_key).code === k).length;
+  const over = CHK.titleCounts.reduce((a, t) => a + Math.max(t.diff, 0), 0);
+  $("a-meta").innerHTML = `Checking ${fmt(live.length)} planned slots against ADP data pulled <b>${esc(DB.adp.pulledAt || "—")}</b>` +
+    ` (${fmt(CHK.counted.length)} full-time staff active at campuses; substitutes and part-time excluded). The check updates instantly as the plan changes; ` +
+    (DB.user.role === "viewer" ? "" : "use <b>Refresh ADP data</b> above to pull the latest from ADP.");
+  const tiles = [["Matches ADP", code("MATCH"), "name, location & title agree", "ok", "iss:ALL:MATCH"],
+    ["Location differs", n("LOCATION"), "ADP campus ≠ plan campus", "warn", "iss:ALL:LOCATION"],
+    ["Title differs", n("TITLE"), "ADP job title ≠ plan", "warn", "iss:ALL:TITLE"],
+    ["Name differs", n("NAME"), "same Position ID, other name", "info", "iss:ALL:NAME"],
+    ["Terminated in ADP", n("NOT_ACTIVE"), "planned as returning / new", "bad", "iss:ALL:NOT_ACTIVE"],
+    ["Not found in ADP", n("NOT_IN_ADP"), "no Position ID or name match", "bad", "iss:ALL:NOT_IN_ADP"],
+    ["New hires not in ADP yet", code("NOT_YET"), "expected until onboarded", "info", "iss:ALL:NOT_YET"],
+    ["In ADP, not in plan", CHK.notInPlan.length, "active full-time, no slot", "bad", "nip:ALL"],
+    ["Same person twice", n("DUPLICATE"), "two slots, one person", "warn", "iss:ALL:DUPLICATE"],
+    ["Overhire", over, "ADP above planned, by title", "bad", "tc:ALL:OVER"]];
+  $("a-kpis").innerHTML = tiles.map(([l, v, h, cls, d]) => `<button class="kpi ${cls}" type="button" data-d="${d}"><div class="lbl">${l}</div><div class="val">${fmt(v)}</div><div class="hint">${h}</div></button>`).join("");
+
+  const only = $("a-over-only").checked;
+  const tcs = CHK.titleCounts.filter(t => !only || t.diff > 0).sort((a, b) => a.campus.localeCompare(b.campus) || a.job.localeCompare(b.job));
+  $("a-over-count").textContent = `${tcs.length} campus × title rows`;
+  $("a-over").innerHTML = titleTable(tcs);
+
+  const rows = adpIssueRows();
+  $("a-count").textContent = `${fmt(rows.length)} rows`;
+  $("a-table").innerHTML = issueTable(rows.slice(0, 1500));
+}
+
+function titleTable(tcs) {
+  return `<thead><tr><th>Campus</th><th>Job title</th><th class="num">Planned slots</th><th class="num">Active in ADP</th><th class="num">Difference</th><th>In ADP here without a matching slot</th></tr></thead><tbody>` +
+    (tcs.map(t => { const extra = CHK.counted.filter(w => w.location_code === t.campus && w.job_code === t.job && !slotFor(w, t.campus, t.job)).map(wName);
+      return `<tr><td>${esc(campusName(t.campus))}</td><td>${esc(t.job)} - ${esc(titleOf(t.job))}</td><td class="num">${num(t.slots, `pos:${t.campus}:ALL:${t.job}`)}</td>
+      <td class="num">${num(t.adp, `adp:${t.campus}:${t.job}`)}</td><td class="num ${t.diff > 0 ? "" : ""}">${num((t.diff > 0 ? "+" : "") + t.diff, `tc:${t.campus}:${t.job}`, t.diff > 0 ? "over" : "under")}</td>
+      <td>${extra.map(esc).join(", ") || '<span class="dim">—</span>'}</td></tr>`; }).join("") || `<tr><td colspan="6" class="dim">No overhires.</td></tr>`) + "</tbody>";
+}
+// The planned slot (at this campus and title) that an ADP person fills, if any
+function slotFor(w, campus, job) {
+  const p = CHK.slotOf.get(w.worker_id);
+  return p && p.campus_code === campus && p.job_code === job ? p : null;
+}
+
+function issueTable(rows) {
+  return `<thead><tr><th>ADP check</th><th>Campus (plan)</th><th>Job title (plan)</th><th>Assignment</th><th>Person (plan)</th><th>Status</th>
+    <th>ADP name</th><th>ADP Position ID</th><th>ADP title</th><th>ADP location</th><th>Notes</th></tr></thead><tbody>` +
+    (rows.map(x => {
+      if (x.w) return `<tr><td><span class="pill p-bad">In ADP, not in plan</span></td><td class="dim">—</td><td class="dim">—</td><td></td><td class="dim">—</td><td></td>
+        <td><b>${esc(wName(x.w))}</b></td><td>${esc(x.w.position_id)}</td><td>${esc(x.w.job_code)} - ${esc(x.w.job_title)}</td><td>${esc(campusName(x.w.location_code))}</td>
+        <td class="small">Active full-time in ADP at this campus but no planned slot is filled by them</td></tr>`;
+      const p = x.p, r = x.r, w = r.w;
+      return `<tr class="rowclick" data-edit="${esc(p.position_key)}"><td>${(r.issues.length ? r.issues : [r.code]).map(k => `<span class="pill ${CHECK[k].cls}">${CHECK[k].label}</span>`).join("")}</td>
+        <td>${esc(campusName(p.campus_code))}</td><td>${esc(p.job_code)}</td><td>${esc(p.assignment)}</td><td><b>${esc(person(p)) || "—"}</b></td><td>${esc(p.status)}</td>
+        <td class="${r.issues.includes("NAME") ? "err" : ""}">${w ? esc(wName(w)) : '<span class="dim">—</span>'}</td><td>${w ? esc(w.position_id) : ""}</td>
+        <td class="${r.issues.includes("TITLE") ? "err" : ""}">${w ? esc(w.job_code + " - " + w.job_title) : ""}</td>
+        <td class="${r.issues.includes("LOCATION") ? "err" : ""}">${w ? esc(campusName(w.location_code) || w.location_name) : ""}</td><td class="small">${r.notes.map(esc).join("<br>")}</td></tr>`;
+    }).join("") || `<tr><td colspan="11" class="dim">Nothing to show.</td></tr>`) + "</tbody>";
+}
+
+/* ================================================================ detail lists (every number) */
+let detail = null;
+function openDetail(key) {
+  // Keys look like kind:campus:rest; job title filters can contain ":" (e.g. G:Teachers)
+  const [kind, camp, ...rest] = key.split(":");
+  const a = kind === "pos" ? rest[0] : rest.join(":"), job = kind === "pos" ? rest.slice(1).join(":") : "";
+  const inC = x => camp === "ALL" || camp.split("+").includes(x);
+  const jf = job ? titleFilter(job) : () => true;
+  const where = camp === "ALL" ? "all campuses" : camp.includes("+") ? "selected campuses" : campusName(camp);
+  const jl = job ? (job.startsWith("G:") ? job.slice(2) : job === "ALL" ? "" : job) : "";
+  if (kind === "pos") {
+    const rows = livePositions().filter(p => inC(p.campus_code) && (a === "ALL" || p.status === a) && jf(p.job_code)).map(p => ({ p, r: CHK.byPos.get(p.position_key) }));
+    return showDetail({ title: `${a === "ALL" ? "Planned slots" : a}${jl ? " · " + jl : ""} — ${where}`, kind: "issues", rows });
+  }
+  if (kind === "adp") {
+    const jf2 = titleFilter(a || "ALL");
+    const rows = CHK.counted.filter(w => inC(w.location_code) && jf2(w.job_code)).map(w => {
+      const p = CHK.slotOf.get(w.worker_id);
+      return p ? { p, r: CHK.byPos.get(p.position_key) } : { w };
+    });
+    return showDetail({ title: `Full-time staff active in ADP${a && a !== "ALL" ? " · " + (a.startsWith("G:") ? a.slice(2) : a) : ""} — ${where}`, kind: "issues", rows,
+      sub: "Each person with the planned slot they fill (if any)." });
+  }
+  if (kind === "iss") {
+    const rows = livePositions().filter(p => inC(p.campus_code)).map(p => ({ p, r: CHK.byPos.get(p.position_key) }))
+      .filter(({ r }) => a === "ANY" ? r.issues.length : a === "MATCH" || a === "NOT_YET" ? r.code === a : r.issues.includes(a));
+    return showDetail({ title: `${a === "ANY" ? "ADP discrepancies" : CHECK[a].label} — ${where}`, kind: "issues", rows });
+  }
+  if (kind === "nip") return showDetail({ title: `In ADP, not in plan — ${where}`, kind: "issues", rows: CHK.notInPlan.filter(w => inC(w.location_code)).map(w => ({ w })) });
+  if (kind === "tc") {
+    const f = a === "OVER" || a === "ALL" ? () => true : titleFilter(a);
+    const rows = CHK.titleCounts.filter(t => inC(t.campus) && f(t.job) && (a !== "OVER" || t.diff > 0));
+    return showDetail({ title: `${a === "OVER" ? "Overhires by job title" : "Planned vs. ADP by job title"} — ${where}`, kind: "titles", rows, sub: "Click a number for the people behind it." });
+  }
+}
+function showDetail(d) { detail = d; $("dm-q").value = ""; renderDetail(); openM("dm"); }
+function renderDetail() {
+  const q = $("dm-q").value.toLowerCase();
+  $("dm-title").textContent = detail.title; $("dm-sub").textContent = detail.sub || "";
+  let rows = detail.rows;
+  if (q) rows = rows.filter(x => JSON.stringify(x, (k, v) => k.startsWith("_") ? undefined : v).toLowerCase().includes(q));
+  $("dm-count").textContent = `${fmt(rows.length)} rows`;
+  if (detail.kind === "titles") $("dm-table").innerHTML = titleTable(rows);
+  else if (detail.kind === "log") $("dm-table").innerHTML = logTable(rows);
+  else $("dm-table").innerHTML = issueTable(rows);
+}
+function exportDetail() {
+  if (detail.kind === "log") return downloadCsv(detail.title + ".csv", LOG_COLS, detail.rows);
+  if (detail.kind === "titles") return downloadCsv(detail.title + ".csv", [[t => campusName(t.campus), "Campus"], ["job", "Job code"], [t => titleOf(t.job), "Title"],
+    ["slots", "Planned slots"], ["adp", "Active in ADP"], ["diff", "Difference"]], detail.rows);
+  downloadCsv(detail.title + ".csv", ISSUE_COLS, detail.rows);
+}
+const ISSUE_COLS = [
+  [x => x.p ? (x.r.issues.length ? x.r.issues : [x.r.code]).map(k => CHECK[k].label).join("; ") : "In ADP, not in plan", "ADP check"],
+  [x => x.p ? x.p.position_key : "", "Position"], [x => x.p ? campusName(x.p.campus_code) : campusName(x.w.location_code), "Campus"],
+  [x => x.p ? x.p.job_code : "", "Job code (plan)"], [x => x.p ? x.p.assignment : "", "Assignment"], [x => x.p ? person(x.p) : "", "Person (plan)"],
+  [x => x.p ? x.p.status : "", "Status"], [x => x.p ? x.p.adp_position_id : "", "Position ID (plan)"],
+  [x => { const w = x.w || x.r.w; return w ? wName(w) : ""; }, "ADP name"], [x => { const w = x.w || x.r.w; return w ? w.position_id : ""; }, "ADP Position ID"],
+  [x => { const w = x.w || x.r.w; return w ? `${w.job_code} - ${w.job_title}` : ""; }, "ADP title"],
+  [x => { const w = x.w || x.r.w; return w ? campusName(w.location_code) || w.location_name : ""; }, "ADP location"],
+  [x => x.r ? x.r.notes.join("; ") : "", "Notes"]];
+
+/* ================================================================ CHANGE LOG tab */
+const LOG_COLS = [["timestamp", "When"], ["user", "Who"], ["action", "Action"], ["position_key", "Position"], ["campus_code", "Campus"],
+  ["job_code", "Job"], ["field", "Field"], ["old_value", "Old value"], ["new_value", "New value"], ["note", "Reason / note"]];
+async function loadLog() {
+  $("l-count").innerHTML = '<span class="spin"></span> loading';
+  try {
+    LOG = await call("getChangeLog", {});
+    const users = [...new Set(LOG.map(r => r.user))].sort(), acts = [...new Set(LOG.map(r => r.action))].sort();
+    const u = $("l-user").value, ac = $("l-action").value;
+    $("l-user").innerHTML = `<option value="ALL">All people</option>` + users.map(x => `<option>${esc(x)}</option>`).join("");
+    $("l-action").innerHTML = `<option value="ALL">All actions</option>` + acts.map(x => `<option>${esc(x)}</option>`).join("");
+    if (users.includes(u)) $("l-user").value = u; if (acts.includes(ac)) $("l-action").value = ac;
+    renderLog();
+  } catch (e) { $("l-count").textContent = e.message; }
+}
+function logRows() {
+  const c = $("l-campus").value, u = $("l-user").value, a = $("l-action").value, from = $("l-from").value, to = $("l-to").value, q = $("l-q").value.toLowerCase();
+  return (LOG || []).filter(r => (c === "ALL" || r.campus_code === c) && (u === "ALL" || r.user === u) && (a === "ALL" || r.action === a)
+    && (!from || r.timestamp.slice(0, 10) >= from) && (!to || r.timestamp.slice(0, 10) <= to)
+    && (!q || Object.values(r).join(" ").toLowerCase().includes(q)));
+}
+function logTable(rows) {
+  return `<thead><tr>${LOG_COLS.map(c => `<th>${c[1]}</th>`).join("")}</tr></thead><tbody>` +
+    (rows.slice(0, 2000).map(r => `<tr><td class="small">${esc(r.timestamp)}</td><td class="small">${esc(r.user)}</td><td><span class="pill p-muted">${esc(r.action)}</span></td>
+      <td>${r.position_key ? `<button class="link" type="button" data-hist="${esc(r.position_key)}">${esc(r.position_key)}</button>` : ""}</td><td>${esc(r.campus_code)}</td><td>${esc(r.job_code)}</td>
+      <td>${esc(r.field)}</td><td class="dim">${esc(r.old_value)}</td><td><b>${esc(r.new_value)}</b></td><td class="small">${esc(r.note)}</td></tr>`).join("")
+      || `<tr><td colspan="10" class="dim">No changes match.</td></tr>`) + "</tbody>";
+}
+function renderLog() { const rows = logRows(); $("l-count").textContent = `${fmt(rows.length)} of ${fmt(LOG.length)} entries`; $("l-table").innerHTML = logTable(rows); }
+
+/* ================================================================ ACCESS tab */
+function renderAccess() {
+  $("x-table").innerHTML = `<thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Campuses</th><th>Added</th><th></th></tr></thead><tbody>` +
+    DB.editors.map(e => `<tr><td><b>${esc(e.name)}</b></td><td>${esc(e.email)}</td><td>${esc(e.role)}</td><td>${esc(e.campuses)}</td>
+      <td class="small dim">${esc(e.added_at)} by ${esc(e.added_by)}</td><td class="acts"><button class="btn" data-xedit="${esc(e.email)}" type="button">Edit</button>
+      <button class="btn danger" data-xdel="${esc(e.email)}" type="button">Remove</button></td></tr>`).join("") + "</tbody>";
+}
+function openAccess(e) {
+  $("xe-title").textContent = e ? "Change access" : "Add person";
+  $("xe-email").value = e ? e.email : ""; $("xe-email").disabled = !!e;
+  $("xe-name").value = e ? e.name : ""; $("xe-role").value = e ? e.role : "editor"; $("xe-campuses").value = e ? e.campuses : "ALL";
+  $("xe-err").textContent = ""; openM("xe");
+}
+async function saveAccess() {
+  $("xe-save").disabled = true;
+  try {
+    const rec = await call("saveEditor", { email: $("xe-email").value, name: $("xe-name").value, role: $("xe-role").value, campuses: $("xe-campuses").value });
+    const i = DB.editors.findIndex(x => x.email === rec.email); if (i >= 0) DB.editors[i] = rec; else DB.editors.push(rec);
+    LOG = null; renderAccess(); closeM("xe"); toast(`Access saved for ${rec.email}`);
+  } catch (e) { $("xe-err").textContent = e.message; }
+  finally { $("xe-save").disabled = false; }
+}
+async function removeAccess(email) {
+  if (!confirm(`Remove ${email} from the portal?`)) return;
+  try { await call("removeEditor", email); DB.editors = DB.editors.filter(x => x.email !== email); LOG = null; renderAccess(); toast(`Removed ${email}`); }
+  catch (e) { toast(e.message, "bad"); }
+}
+
+/* ================================================================ ADP refresh */
+let refreshBusy = false;
+async function refreshAdp() {
+  if (refreshBusy) return;
+  refreshBusy = true; $("refresh").disabled = true;
+  const started = Date.now(), before = DB.adp.pulledAt;
+  const el = () => `${Math.floor((Date.now() - started) / 60000)}:${String(Math.floor((Date.now() - started) / 1000) % 60).padStart(2, "0")}`;
+  const msg = h => $("refresh-msg").innerHTML = h;
+  try {
+    msg('<span class="spin"></span> Requesting ADP pull…');
+    await call("startAdpRefresh");
+    for (;;) {
+      await new Promise(r => setTimeout(r, 10000));
+      const s = await call("getAdpRefreshStatus");
+      const run = s.run;
+      msg(`<span class="spin"></span> Pulling ADP… ${el()}${run ? ` · <a href="${esc(run.url)}" target="_blank" rel="noopener">view</a>` : ""}`);
+      if (s.pulledAt && s.pulledAt !== before) break;
+      if (run && run.status === "completed" && run.conclusion !== "success") throw new Error(`ADP pull failed (${run.conclusion}). Open “view” for details.`);
+      if (Date.now() - started > 25 * 60000) throw new Error("Timed out waiting for the ADP pull.");
+    }
+    await load(true);
+    toast(`ADP data refreshed (${DB.adp.pulledAt}). Cross-check updated.`);
+  } catch (e) { toast(e.message, "bad"); }
+  finally { refreshBusy = false; $("refresh").disabled = false; msg(`ADP data from ${esc(DB.adp.pulledAt || "—")}`); }
+}
+
+/* ================================================================ wiring */
+function showTab(t) {
+  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === t));
+  document.querySelectorAll("main > section").forEach(s => s.hidden = s.id !== "tab-" + t);
+  if (t === "log") { if (!LOG) loadLog(); else renderLog(); }
+}
+document.addEventListener("click", e => {
+  const t = e.target;
+  const tab = t.closest("#tabs button"); if (tab) return showTab(tab.dataset.tab);
+  const cl = t.closest("[data-close]"); if (cl) return closeM(cl.dataset.close);
+  const d = t.closest("[data-d]"); if (d) return openDetail(d.dataset.d);
+  const h = t.closest("[data-hist]"); if (h) return openHistory(h.dataset.hist);
+  const cp = t.closest("[data-copy]"); if (cp) return openEditor(DB.positions.find(p => p.position_key === cp.dataset.copy), true);
+  const rm = t.closest("[data-remove]"); if (rm) return openRemove(DB.positions.find(p => p.position_key === rm.dataset.remove), "remove");
+  const rs = t.closest("[data-restore]"); if (rs) return openRemove(DB.positions.find(p => p.position_key === rs.dataset.restore), "restore");
+  const xe = t.closest("[data-xedit]"); if (xe) return openAccess(DB.editors.find(x => x.email === xe.dataset.xedit));
+  const xd = t.closest("[data-xdel]"); if (xd) return removeAccess(xd.dataset.xdel);
+  const sw = t.closest("[data-w]");
+  if (sw) {
+    const w = DB.adpWorkers.find(x => x.worker_id === sw.dataset.w);
+    $("pe-first").value = w.given; $("pe-last").value = w.family; $("pe-pid").value = w.position_id;
+    $("pe-sugg").hidden = true; $("pe-find").value = ""; return previewCheck();
+  }
+  const ed = t.closest("[data-edit]"); if (ed && !t.closest("button")) return openEditor(DB.positions.find(p => p.position_key === ed.dataset.edit));
+  if (t.classList.contains("modal-bg")) closeM(t.id);
+});
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  const open = [...document.querySelectorAll(".modal-bg")].filter(m => !m.hidden).pop();
+  if (open) closeM(open.id);
+});
+["p-campus", "p-title", "p-status", "p-issues", "p-removed"].forEach(id => $(id).addEventListener("change", renderPlan));
+$("p-q").addEventListener("input", renderPlan);
+$("p-add").onclick = () => openEditor(null);
+$("p-export").onclick = () => downloadCsv(`${DB.schoolYear}_FTE_plan_${$("p-campus").value}.csv`, [["position_key", "Position"], [p => campusName(p.campus_code), "Campus"],
+  ["job_code", "Job code"], [p => titleOf(p.job_code), "Job title"], ["assignment", "Assignment"], ["first_name", "First name"], ["last_name", "Last name"],
+  ["adp_position_id", "ADP Position ID"], ["status", "Status"], ["notes", "Notes"], [p => { const r = CHK.byPos.get(p.position_key); return r ? (r.issues.length ? r.issues : [r.code]).map(k => CHECK[k].label).join("; ") : "Removed"; }, "ADP check"],
+  ["updated_at", "Last change"], ["updated_by", "Changed by"], ["deleted", "Removed"]], planRows());
+["s-title", "s-region", "s-view"].forEach(id => $(id).addEventListener("change", renderJobTitles));
+["a-campus", "a-issue", "a-over-only"].forEach(id => $(id).addEventListener("change", renderAdp));
+$("a-q").addEventListener("input", renderAdp);
+$("a-export").onclick = () => downloadCsv(`${DB.schoolYear}_ADP_crosscheck.csv`, ISSUE_COLS, adpIssueRows());
+["l-campus", "l-user", "l-action", "l-from", "l-to"].forEach(id => $(id).addEventListener("change", renderLog));
+$("l-q").addEventListener("input", renderLog);
+$("l-export").onclick = () => downloadCsv(`${DB.schoolYear}_FTE_change_log.csv`, LOG_COLS, logRows());
+$("dm-q").addEventListener("input", renderDetail); $("dm-export").onclick = exportDetail;
+$("pe-status").addEventListener("change", () => { syncStatus(); previewCheck(); });
+["pe-first", "pe-last", "pe-pid", "pe-campus", "pe-job"].forEach(id => $(id).addEventListener("input", previewCheck));
+$("pe-find").addEventListener("input", suggest);
+$("pe-save").onclick = savePosition;
+$("rm-go").onclick = doRemove; $("rm-note").addEventListener("keydown", e => { if (e.key === "Enter") doRemove(); });
+$("x-add").onclick = () => openAccess(null); $("xe-save").onclick = saveAccess;
+$("refresh").onclick = refreshAdp;
+$("reload").onclick = async () => { $("reload").disabled = true; LOG = null; await load(true); $("reload").disabled = false; toast("Reloaded the latest plan."); };
+load();
+</script>
+</body>
+</html>

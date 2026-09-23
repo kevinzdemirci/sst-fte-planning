@@ -11,3 +11,4 @@ certs/
 *.textClipping
 FTE Planning.md/API ADP.npv/
 adp_cache/
+planning_2027/*.xlsx
