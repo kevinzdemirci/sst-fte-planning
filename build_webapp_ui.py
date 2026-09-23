@@ -91,6 +91,8 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   .htitle { flex: 1 1 280px; }
   .run { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .run #run-msg { font-size: 12px; color: #c7d2fe; }
+  .run #run-msg a { color: #fff; }
+  .run-save { background: var(--navy); color: #fff !important; border-color: var(--navy) !important; }
   .run-btn { background: #fff; color: var(--navy) !important; border-color: #fff !important; }
   .run-btn.off { opacity: .75; }
   .run-btn:disabled { cursor: progress; }
@@ -196,6 +198,25 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
       <span class="count" id="m-count"></span>
     </div>
     <div class="m-body"><table id="m-table"></table></div>
+  </div>
+</div>
+<div class="modal-bg" id="gh" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="gh-title" style="width:min(560px,100%)">
+    <div class="m-head">
+      <div><h3 id="gh-title">Run the cross-check on GitHub</h3>
+        <p class="sub" style="margin:2px 0 0">The run pulls ADP live, re-reads the FTE lists and republishes this page (about 5 minutes).</p></div>
+      <button class="btn" id="gh-close" type="button" aria-label="Close">&#x2715;</button>
+    </div>
+    <div style="padding:0 16px 16px">
+      <p class="note" style="margin-top:0">Paste a GitHub fine-grained token for <b>this repository</b> with <b>Actions: Read and write</b> permission. It is saved only in this browser.</p>
+      <input type="password" id="gh-token" placeholder="github_pat_…" autocomplete="off" style="width:100%;font:inherit;padding:7px 10px;border-radius:7px;border:1px solid var(--border);background:var(--surface);color:var(--ink)">
+      <p class="note" id="gh-err" style="color:var(--bad)"></p>
+      <div class="toolbar" style="margin:0">
+        <button class="btn run-save" id="gh-save" type="button">Save &amp; run</button>
+        <a class="btn" id="gh-open" target="_blank" rel="noopener" style="text-decoration:none">Or run it in GitHub &#x2197;</a>
+        <button class="btn" id="gh-forget" type="button" hidden>Forget saved token</button>
+      </div>
+    </div>
   </div>
 </div>
 <div class="toast" id="toast" hidden></div>
@@ -593,38 +614,133 @@ const PEOPLE_CSV = ["status", "issues", "campus", "fte_name", "adp_name", "posit
   "adp_campus", "adp_location", "worker_type", "assignment", "list_status", "notes", "adp_status", "detail", "source"];
 
 /* ---------------------------------------------------------------- re-run */
+// Three ways to run: the local app (/api/run), GitHub Actions from the GitHub Pages portal, or not at all.
 
 let API = false;
+const GH = location.hostname.endsWith("github.io")
+  ? { owner: location.hostname.split(".")[0], repo: location.pathname.split("/").filter(Boolean)[0], workflow: "crosscheck.yml" }
+  : null;
+const TOKEN_KEY = "sst-fte-gh-token";
+const ghApi = p => `https://api.github.com/repos/${GH.owner}/${GH.repo}${p}`;
+const ghActionsUrl = () => GH ? `https://github.com/${GH.owner}/${GH.repo}/actions/workflows/${GH.workflow}` : "#";
+const getToken = () => { try { return localStorage.getItem(TOKEN_KEY) || ""; } catch (e) { return ""; } };
+const setToken = t => { try { t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY); } catch (e) {} };
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
 async function detectApi() {
-  try {
-    const r = await fetch("/api/status", { cache: "no-store" });
-    API = r.ok && (await r.json()).ok === true;
-  } catch (e) { API = false; }
+  if (!GH) {
+    try {
+      const r = await fetch("/api/status", { cache: "no-store" });
+      API = r.ok && (await r.json()).ok === true;
+    } catch (e) { API = false; }
+  }
   $("run").title = API ? "Pull ADP live, re-read the FTE list files and redo the cross-check"
-    : "Re-running needs the local app (ADP credentials stay on your computer). Double-click “Run FTE Cross-Check.command” in the project folder.";
-  $("run").classList.toggle("off", !API);
+    : GH ? "Run the cross-check on GitHub (pulls ADP live and republishes this page, about 5 minutes)"
+    : "Re-running needs the local app or the online portal. Double-click “Run FTE Cross-Check.command” in the project folder.";
+  $("run").classList.toggle("off", !API && !GH);
+}
+
+function busy(on, msg = "") {
+  const btn = $("run");
+  btn.disabled = on;
+  btn.innerHTML = on ? '<span class="spin"></span> Running…' : "&#x21bb; Run cross-check";
+  $("run-msg").innerHTML = msg;
+}
+
+function applyReport(data) {
+  const before = REPORT.campuses.reduce((a, c) => a + c.overhire, 0);
+  REPORT = data;
+  renderMeta(); populateCampusFilter(); populateTitleFilter(); renderAll();
+  const after = REPORT.campuses.reduce((a, c) => a + c.overhire, 0);
+  toast(`Cross-check complete — ADP pulled ${REPORT.adp_pulled_at}. Overhire ${before} → ${after}.`, "ok");
 }
 
 async function runCrosscheck() {
+  if (GH) return runOnGithub();
   if (!API) { toast($("run").title, "warn"); return; }
-  const btn = $("run");
-  btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Running…';
-  $("run-msg").textContent = "Pulling ADP and re-reading FTE lists (takes 3–4 minutes)…";
-  const before = REPORT.campuses.reduce((a, c) => a + c.overhire, 0);
+  busy(true, "Pulling ADP and re-reading FTE lists (takes 3–4 minutes)…");
   try {
     const r = await fetch("/api/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || r.statusText);
-    REPORT = data;
-    renderMeta(); populateCampusFilter(); populateTitleFilter(); renderAll();
-    const after = REPORT.campuses.reduce((a, c) => a + c.overhire, 0);
-    toast(`Cross-check complete — ADP pulled ${REPORT.adp_pulled_at}. Overhire ${before} → ${after}.`, "ok");
-    $("run-msg").textContent = "";
+    applyReport(data);
   } catch (e) {
     toast("Cross-check failed: " + e.message, "bad");
-    $("run-msg").textContent = "";
   } finally {
-    btn.disabled = false; btn.innerHTML = "&#x21bb; Run cross-check";
+    busy(false);
+  }
+}
+
+function openGhDialog(err = "") {
+  $("gh-err").textContent = err;
+  $("gh-token").value = "";
+  $("gh-open").href = ghActionsUrl();
+  $("gh-forget").hidden = !getToken();
+  $("gh").hidden = false;
+  $("gh-token").focus();
+}
+
+async function gh(path, token, opts = {}) {
+  const r = await fetch(ghApi(path), {
+    ...opts,
+    headers: { "Accept": "application/vnd.github+json", "Authorization": `Bearer ${token}`, "X-GitHub-Api-Version": "2022-11-28", ...(opts.headers || {}) },
+  });
+  if (r.status === 401 || r.status === 403 || r.status === 404) {
+    const e = new Error(r.status === 404 ? "Token cannot see this repository or its workflow." : "GitHub rejected the token (expired or missing Actions: Read and write permission).");
+    e.auth = true; throw e;
+  }
+  if (!r.ok) throw new Error(`GitHub API ${r.status}`);
+  return r.status === 204 ? null : r.json();
+}
+
+async function runOnGithub() {
+  const token = getToken();
+  if (!token) return openGhDialog();
+  const started = Date.now();
+  const elapsed = () => `${Math.floor((Date.now() - started) / 60000)}:${String(Math.floor((Date.now() - started) / 1000) % 60).padStart(2, "0")}`;
+  busy(true, "Starting the cross-check on GitHub…");
+  try {
+    await gh(`/actions/workflows/${GH.workflow}/dispatches`, token, { method: "POST", body: JSON.stringify({ ref: "main" }) });
+
+    // Find the run we just started, then follow it to completion
+    let run = null;
+    for (let i = 0; i < 30 && !run; i++) {
+      await sleep(4000);
+      const d = await gh(`/actions/workflows/${GH.workflow}/runs?event=workflow_dispatch&per_page=5`, token);
+      run = (d.workflow_runs || []).find(x => new Date(x.created_at).getTime() > started - 60000);
+    }
+    if (!run) throw new Error("The run did not start. Check the Actions tab on GitHub.");
+    while (run.status !== "completed") {
+      busy(true, `Pulling ADP on GitHub… ${elapsed()} · <a href="${run.html_url}" target="_blank" rel="noopener">view run</a>`);
+      if (Date.now() - started > 25 * 60000) throw new Error("Timed out waiting for the run.");
+      await sleep(10000);
+      run = await gh(`/actions/runs/${run.id}`, token);
+    }
+    if (run.conclusion !== "success") {
+      toast(`Cross-check failed on GitHub (${run.conclusion}). Open the run for details.`, "bad");
+      busy(false, `<a href="${run.html_url}" target="_blank" rel="noopener">view failed run</a>`);
+      return;
+    }
+
+    // Wait for GitHub Pages to publish the new report, then load it in place
+    const prev = REPORT.generated_at;
+    for (let i = 0; i < 40; i++) {
+      busy(true, `Publishing results… ${elapsed()}`);
+      try {
+        const r = await fetch(`adp_reconciliation_report.json?t=${Date.now()}`, { cache: "no-store" });
+        if (r.ok) {
+          const data = await r.json();
+          if (data.generated_at !== prev) { applyReport(data); busy(false); return; }
+        }
+      } catch (e) {}
+      await sleep(15000);
+    }
+    toast("The run finished; the page will show new results after a refresh in a minute.", "warn");
+    busy(false);
+  } catch (e) {
+    busy(false);
+    if (e.auth) { setToken(""); openGhDialog(e.message); }
+    else toast("Cross-check failed: " + e.message, "bad");
   }
 }
 
@@ -658,11 +774,23 @@ function init() {
   $("m-q").oninput = renderModal;
   $("m-close").onclick = closeModal;
   $("modal").onclick = e => { if (e.target.id === "modal") closeModal(); };
-  document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("modal").hidden) closeModal(); });
+  document.addEventListener("keydown", e => {
+    if (e.key !== "Escape") return;
+    if (!$("gh").hidden) $("gh").hidden = true; else if (!$("modal").hidden) closeModal();
+  });
   $("m-export").onclick = () => modal.kind === "titles"
     ? downloadCsv(`${modal.title}.csv`, modal.rows, ["campus", "job_code", "job_title", "approved", "adp_active", "variance", "unapproved"])
     : downloadCsv(`${modal.title}.csv`, modal.rows, PEOPLE_CSV);
   $("run").onclick = runCrosscheck;
+  $("gh-close").onclick = () => $("gh").hidden = true;
+  $("gh").onclick = e => { if (e.target.id === "gh") $("gh").hidden = true; };
+  $("gh-save").onclick = () => {
+    const t = $("gh-token").value.trim();
+    if (!t) { $("gh-err").textContent = "Paste a token first."; return; }
+    setToken(t); $("gh").hidden = true; runOnGithub();
+  };
+  $("gh-token").onkeydown = e => { if (e.key === "Enter") $("gh-save").click(); };
+  $("gh-forget").onclick = () => { setToken(""); $("gh-forget").hidden = true; toast("Saved token removed from this browser.", "ok"); };
   // One delegated handler for every clickable number, campus name and sortable header
   document.addEventListener("click", e => {
     const d = e.target.closest("[data-d]");

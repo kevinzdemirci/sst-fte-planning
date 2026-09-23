@@ -57,7 +57,7 @@ CAMPUSES = [
     ("HC",   "SST Hill Country Elementary",        "San Antonio",    "SST Hill Country Elem. 2026-27 Approved FTE List.xlsx"),
     ("HCCP", "SST Hill Country College Prep",      "San Antonio",    "SST Hill Country CP 2026-27 Approved FTE List.xlsx"),
     ("NW",   "SST Northwest",                      "San Antonio",    "SST Northwest 2026-27 Approved FTE List.xlsx"),
-    ("SCH",  "SST Schertz Early Elementary",       "San Antonio",    "SST Schertz Early Elem. 2026-27 Approved FTE List (1).xlsx"),
+    ("SCH",  "SST Schertz Early Elementary",       "San Antonio",    "SST Schertz Early Elem. 2026-27 Approved FTE List.xlsx"),
     ("SCH2", "SST Schertz Elementary",             "San Antonio",    "SST Schertz Elem. 2026-27 Approved FTE List.xlsx"),
     ("SON",  "SST Sonterra",                       "San Antonio",    "SST Sonterra 2026-27 Approved FTE List.xlsx"),
     ("GAR",  "NF Greg Garcia",                     "San Antonio",    "New Frontiers Greg Garcia 2026-27 Approved FTE List.xlsx"),
