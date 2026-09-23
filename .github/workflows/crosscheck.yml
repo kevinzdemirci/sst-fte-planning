@@ -1,0 +1,63 @@
+# Runs the FTE list vs. ADP Position cross-check and republishes the dashboard.
+# Started from the portal's "Run cross-check" button (or Actions tab > Run workflow).
+#
+# Required repository secrets (Settings > Secrets and variables > Actions):
+#   ADP_CLIENT_ID, ADP_CLIENT_SECRET  - ADP API client credentials
+#   ADP_CERT_PEM                      - contents of the ADP mTLS certificate (.pem)
+#   ADP_KEY_PEM                       - contents of the matching private key (.key)
+name: FTE ADP cross-check
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fte-adp-crosscheck
+  cancel-in-progress: false
+
+jobs:
+  crosscheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install openpyxl
+
+      - name: Write ADP certificate
+        env:
+          ADP_CERT_PEM: ${{ secrets.ADP_CERT_PEM }}
+          ADP_KEY_PEM: ${{ secrets.ADP_KEY_PEM }}
+        run: |
+          if [ -z "$ADP_CERT_PEM" ] || [ -z "$ADP_KEY_PEM" ]; then
+            echo "::error::ADP_CERT_PEM / ADP_KEY_PEM secrets are not set"; exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/adp"
+          printf '%s\n' "$ADP_CERT_PEM" > "$RUNNER_TEMP/adp/cert.pem"
+          printf '%s\n' "$ADP_KEY_PEM" > "$RUNNER_TEMP/adp/key.pem"
+          chmod 600 "$RUNNER_TEMP/adp/"*.pem
+
+      - name: Pull ADP and cross-check
+        env:
+          ADP_CLIENT_ID: ${{ secrets.ADP_CLIENT_ID }}
+          ADP_CLIENT_SECRET: ${{ secrets.ADP_CLIENT_SECRET }}
+          ADP_CERT_PATH: ${{ runner.temp }}/adp/cert.pem
+          ADP_KEY_PATH: ${{ runner.temp }}/adp/key.pem
+        run: |
+          python sync_adp_payroll.py
+          python build_webapp_ui.py
+
+      - name: Publish refreshed dashboard
+        run: |
+          rm -rf "$RUNNER_TEMP/adp"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add adp_reconciliation_report.json index.html fte_planning_app.html apps_script/Index.html
+          git commit -m "Refresh FTE vs. ADP cross-check" || { echo "No changes"; exit 0; }
+          git push
