@@ -18,52 +18,30 @@
 
 ---
 
-## 📌 Executive Overview
+## 📌 What this tool does
 
-This portal replaces spreadsheet-only FTE (full-time-equivalent) staffing tracking across all 21 SST campuses and 2 partner campuses. It gives the FTE Planning Administrator full control to validate hiring and enforce approved headcount, while giving Superintendents, Board Members, and Regional Directors clean read-only visibility into campus staffing variances.
+Cross-checks every person on the **2026-27 Approved FTE Lists** against the **ADP Workforce Now Staff Profile → Position tab** (Position ID, Job Title, Location) for all campuses, and flags:
 
-### The Staffing Baseline (2026–2027 SY)
-- **Campuses Monitored**: 21 SST Campuses + 2 Partner Campuses (23 sites total)
-- **Total Approved FTE Baseline**: **1,359.0 FTEs** across 576 role allocations
-- **Active / Live Filled Headcount**: **1,336.0 FTEs** (98.3% staffing fill rate)
-- **Approved Open Vacancies**: **23.0 FTEs**
-- **Active Violations / Flags**: **0 Unapproved Hires**
+| Check | Meaning |
+| :--- | :--- |
+| **Location differs** | ADP home work location is a different campus than the FTE list |
+| **Title differs** | ADP job code (e.g. `11TEACH`) differs from the FTE list job title |
+| **Name differs** | Same Position ID, different name in ADP (usually a name change) |
+| **On list, not active** | On the approved list but terminated / not found in ADP (slot is really open) |
+| **Not on FTE list** | Active in ADP at a campus but on no approved list |
+| **Overhire** | ADP active headcount for a campus + job title exceeds its approved slots |
 
----
+People are matched by ADP Position ID, falling back to name when the Position ID changed (transfer/rehire). Terminated and template rows copied from other campuses (`POSITION STATUS = T`, `STATUS = TERM/TRANSFER`) are not counted as approved slots.
 
-## 🔑 Core Capabilities
+## 🔄 Refreshing the data
 
-### 1. Strict Real-Time Hiring Validation & Administrative Overrides
-- When logging a hire, the system validates against the baseline budget:
-  - **Catches unapproved roles**: Alerts immediately if a campus attempts to hire into a role that was never approved.
-  - **Catches over-FTE violations**: Alerts immediately if adding a hire causes `Actual FTE > Approved FTE`.
-- **Enforced Overrides**: The system blocks casual submissions when a violation occurs. To proceed, an explicit **Administrative Override** must be granted with a **mandatory justification reason** (e.g. emergency SPED student transfer or board amendment).
+```bash
+python3 sync_adp_payroll.py            # pull live ADP positions + reconcile (needs .env + certs)
+python3 sync_adp_payroll.py --cached   # re-run using the last ADP pull in adp_cache/
+python3 build_webapp_ui.py             # rebuild index.html / fte_planning_app.html / apps_script/Index.html
+```
 
-### 2. Permanent Unfalsifiable Audit Trail
-- Every plan revision, new hire, status update, removed hire, or override is permanently recorded in the `Audit_Log`.
-- Logs record the exact CST timestamp to the second, the user's Google email (`@ssttx.org`), previous value, new value, override status, and reason notes.
-- Includes a single-click **Export Audit to CSV** for board meetings and official state reporting.
-
-### 3. Role-Based Access Control (RBAC) & Editor Whitelist
-- **Regional Talent Acquisition Editors**:
-  - **Ali Dal** (`adal@ssttx.org`)
-  - **Hasan Kendirci** (`hkendirci@ssttx.org`)
-  - Both Ali Dal and Hasan Kendirci have full Editor access across every campus to log new hires, update assignments, process departures, submit overrides, and revise plans. Every transaction is authenticated and signed with their individual `@ssttx.org` identity.
-- **FTE Planning Administrator**: Full oversight and configuration control.
-- **Leadership View (Read-Only)**: Pure visibility for superintendents and board members with network KPIs, campus rollups, variance indicators, and role-by-role drilldown drawers. Accessible via the top-right toggle or by sharing the link with `?view=leadership`.
-- **Live Profile Switcher**: Easily test and preview actions as Ali Dal, Hasan Kendirci, Central Admin, or Leadership using the user menu in the top navigation.
-
----
-
-## 🗄️ Database Architecture
-
-| Sheet Name | Description | Key Fields |
-| :--- | :--- | :--- |
-| **`Campuses`** | Network rollup across all 21 campuses | Campus Name, Region, Grades, Approved FTE, Actual FTE, Vacancies, Variance, Violations |
-| **`Approved_Plan`** | Baseline approved FTE counts per role | Plan ID, Campus, Role Title, Category, Approved FTE, Last Revised Date/By, Revision Notes |
-| **`Actual_Hires`** | Live personnel roster and approved vacancies | Hire ID, Campus, Role, Employee Name, Assignment, FTE, Status, Position ID, Override Details |
-| **`Violations_Overrides`** | Watchdog log for hiring exceptions | Violation ID, Campus, Role, Type, Approved FTE, Actual FTE, Variance, Override Justification |
-| **`Audit_Log`** | Tamper-proof transaction ledger | Log ID, Timestamp, User Email, Action Type, Campus, Role, Old Value, New Value, Reason |
+To add or replace a campus list, drop the file in `FTE Planning.md/2026-2027 Approved FTE Docs/` and update its filename in the `CAMPUSES` table in `sync_adp_payroll.py`.
 
 ---
 

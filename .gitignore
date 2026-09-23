@@ -10,3 +10,4 @@ certs/
 *.pfx
 *.textClipping
 FTE Planning.md/API ADP.npv/
+adp_cache/
