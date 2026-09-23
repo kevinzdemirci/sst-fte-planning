@@ -206,8 +206,9 @@ def names_match(fte_first, fte_last, w):
         return False
     if f1 & f2:
         return True
-    # first-name initial / short form (e.g. "Chris" vs "Christopher")
-    return any(a.startswith(b) or b.startswith(a) for a in f1 for b in f2 if min(len(a), len(b)) >= 3)
+    # short form (e.g. "Chris" vs "Christopher"); needs 2+ extra letters so "Juan" never matches "Juana"
+    return any((a.startswith(b) or b.startswith(a)) and abs(len(a) - len(b)) >= 2
+               for a in f1 for b in f2 if min(len(a), len(b)) >= 3)
 
 
 def adp_display_name(w):
@@ -387,7 +388,8 @@ def reconcile(fte_rows, workers):
             records.append(rec)
             continue
 
-        matched_worker_ids.add(w["worker_id"])
+        rec["_wid"] = w["worker_id"]
+        rec["_pid_exact"] = a.get("position_id") == row["position_id"]
         issues = []
         if a.get("location_code") != row["campus_code"]:
             issues.append("LOCATION_MISMATCH")
@@ -405,6 +407,27 @@ def reconcile(fte_rows, workers):
             rec["status"] = "VACANT_STILL_ACTIVE" if is_vacant else "MATCH"
         rec["detail"] = "; ".join(details)
         records.append(rec)
+
+    # One ADP person fills one approved row. When several rows claim the same person, keep the row that
+    # best agrees with ADP (location, title, Position ID) and flag the rest as listed twice.
+    claims = defaultdict(list)
+    for rec in records:
+        if rec.get("_wid"):
+            claims[rec["_wid"]].append(rec)
+    for wid, recs in claims.items():
+        matched_worker_ids.add(wid)
+        if len(recs) < 2:
+            continue
+        recs.sort(key=lambda r: ("LOCATION_MISMATCH" in r["issues"], "TITLE_MISMATCH" in r["issues"], not r["_pid_exact"]))
+        keep = recs[0]
+        for dup in recs[1:]:
+            dup["status"] = "DUPLICATE_ON_LIST"
+            dup["issues"] = ["DUPLICATE_ON_LIST"]
+            dup["adp_status"] = "Active (counted on another row)"
+            dup["detail"] = f"Same ADP person is also on the {keep['campus']} list ({keep['source']}); this row is an extra slot"
+    for rec in records:
+        rec.pop("_wid", None)
+        rec.pop("_pid_exact", None)
 
     # Active ADP staff at a campus who are on no approved list
     list_codes = {c[0] for c in CAMPUSES if c[3]}
@@ -486,6 +509,7 @@ def reconcile(fte_rows, workers):
             "location_mismatch": sum(1 for r in recs if "LOCATION_MISMATCH" in r["issues"]),
             "title_mismatch": sum(1 for r in recs if "TITLE_MISMATCH" in r["issues"]),
             "name_mismatch": sum(1 for r in recs if "NAME_MISMATCH" in r["issues"]),
+            "duplicate": sum(1 for r in recs if r["status"] == "DUPLICATE_ON_LIST"),
             "not_active": sum(1 for r in recs if r["status"] in ("NOT_ACTIVE_IN_ADP", "NOT_IN_ADP")),
             "not_on_list": sum(1 for r in recs if r["status"] == "NOT_ON_LIST"),
             "overhire": sum(max(t["variance"], 0) for t in tc),
@@ -504,13 +528,9 @@ def reconcile(fte_rows, workers):
     }
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Approved FTE Lists vs. ADP Position cross-check")
-    parser.add_argument("--cached", action="store_true", help="Reuse the last ADP pull in adp_cache/")
-    parser.add_argument("--output", default=DEFAULT_OUTPUT_PATH)
-    args = parser.parse_args()
-
-    if args.cached:
+def run_crosscheck(cached=False, output=DEFAULT_OUTPUT_PATH):
+    """Pull ADP (or reuse the cache), re-read the FTE lists, reconcile, and write the report."""
+    if cached:
         with open(ADP_CACHE_PATH) as f:
             cache = json.load(f)
         print(f"Using cached ADP pull from {cache['pulled_at']}")
@@ -525,17 +545,27 @@ def main():
     report = reconcile(fte_rows, cache["workers"])
     report["adp_pulled_at"] = cache["pulled_at"]
 
+    with open(output, "w") as f:
+        json.dump(report, f, indent=1)
+    return report
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Approved FTE Lists vs. ADP Position cross-check")
+    parser.add_argument("--cached", action="store_true", help="Reuse the last ADP pull in adp_cache/")
+    parser.add_argument("--output", default=DEFAULT_OUTPUT_PATH)
+    args = parser.parse_args()
+
+    report = run_crosscheck(args.cached, args.output)
+
     c = Counter(r["status"] for r in report["records"])
     over = sum(max(t["variance"], 0) for t in report["title_counts"])
-    print(f"\nApproved FTE list slots:   {len(fte_rows)}")
+    print(f"\nApproved FTE list slots:   {sum(x['approved'] for x in report['campuses'])}")
     print(f"ADP active (all):          {report['adp_active_total']}")
     for k in ("MATCH", "LOCATION_MISMATCH", "TITLE_MISMATCH", "NAME_MISMATCH", "NOT_ACTIVE_IN_ADP", "NOT_IN_ADP",
-              "NOT_ON_LIST", "NO_FTE_LIST", "VACANT_STILL_ACTIVE", "OPEN"):
+              "NOT_ON_LIST", "DUPLICATE_ON_LIST", "NO_FTE_LIST", "VACANT_STILL_ACTIVE", "OPEN"):
         print(f"  {k:<22} {c.get(k, 0)}")
     print(f"Overhire headcount (campus x title over approved): {over}")
-
-    with open(args.output, "w") as f:
-        json.dump(report, f, indent=1)
     print(f"\nWrote {args.output}")
 
 

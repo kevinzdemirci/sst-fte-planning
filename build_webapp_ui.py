@@ -87,26 +87,62 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   .count { margin-left: auto; color: var(--ink-3); font-size: 12px; }
   label.chk { font-size: 12.5px; color: var(--ink-2); display: flex; gap: 5px; align-items: center; }
   .note { font-size: 12px; color: var(--ink-3); margin-top: 8px; }
+  .tip { margin: 0 0 10px; font-size: 12.5px; color: var(--ink-2); }
+  .htitle { flex: 1 1 280px; }
+  .run { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .run #run-msg { font-size: 12px; color: #c7d2fe; }
+  .run-btn { background: #fff; color: var(--navy) !important; border-color: #fff !important; }
+  .run-btn.off { opacity: .75; }
+  .run-btn:disabled { cursor: progress; }
+  .spin { display: inline-block; width: 11px; height: 11px; border: 2px solid currentColor; border-right-color: transparent;
+          border-radius: 50%; animation: sp .8s linear infinite; vertical-align: -1px; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+  button.n { font: inherit; font-variant-numeric: tabular-nums; background: none; border: 0; padding: 1px 5px; margin: -1px -5px;
+             border-radius: 5px; color: var(--info); cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
+  button.n:hover, button.n:focus-visible { background: var(--info-bg); outline: none; }
+  button.n.over { color: var(--bad); font-weight: 700; } button.n.under { color: var(--ink-2); }
+  button.link { font: inherit; background: none; border: 0; padding: 0; color: inherit; cursor: pointer; text-align: left; }
+  button.link:hover b { text-decoration: underline; }
+  th.sort { cursor: pointer; }
+  .modal-bg { position: fixed; inset: 0; background: rgba(15, 23, 42, .55); display: flex; align-items: flex-start; justify-content: center;
+              padding: 4vh 16px; z-index: 50; }
+  .modal-bg[hidden] { display: none; }
+  .modal { background: var(--surface); border-radius: 12px; width: min(1300px, 100%); max-height: 92vh; display: flex; flex-direction: column;
+           box-shadow: 0 20px 50px rgba(0,0,0,.35); }
+  .m-head { display: flex; justify-content: space-between; gap: 12px; padding: 14px 16px 10px; }
+  .m-head h3 { margin: 0; font-size: 16px; }
+  .m-body { overflow: auto; border-top: 1px solid var(--border); }
+  .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); max-width: min(640px, calc(100% - 32px));
+           padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; z-index: 60; box-shadow: 0 8px 24px rgba(0,0,0,.2); }
+  .toast[hidden] { display: none; }
+  .t-ok { background: var(--ok-bg); color: var(--ok); } .t-bad { background: var(--bad-bg); color: var(--bad); }
+  .t-warn { background: var(--warn-bg); color: var(--warn); }
+  button.kpi { width: 100%; }
   @media (max-width: 640px) { header { padding: 12px 16px; } .kpi .val { font-size: 22px; } }
 </style>
 </head>
 <body>
 <header>
   <img src="__LOGO__" alt="SST logo">
-  <div>
+  <div class="htitle">
     <h1>FTE List vs. ADP Position Cross-Check</h1>
     <p id="meta"></p>
   </div>
+  <div class="run">
+    <button class="btn run-btn" id="run" type="button">&#x21bb; Run cross-check</button>
+    <span id="run-msg"></span>
+  </div>
 </header>
 <main>
+  <p class="tip">Click any number to see the people and positions behind it.</p>
   <div class="kpis" id="kpis"></div>
 
   <h2>Campus summary</h2>
-  <p class="sub">Approved slots come from each campus's 2026-27 Approved FTE List. ADP Active is the headcount whose ADP Position tab Location is that campus. Click a campus to filter everything below.</p>
+  <p class="sub">Approved slots come from each campus's 2026-27 Approved FTE List. ADP active is the headcount whose ADP Position tab location is that campus. Click a campus name to filter the tables below.</p>
   <div class="card scroll" style="max-height:none"><table id="t-campus"></table></div>
 
   <h2>Overhire check by job title</h2>
-  <p class="sub">ADP active headcount per campus and ADP job title, compared with the number of approved slots for that title. A positive difference is an overhire.</p>
+  <p class="sub">ADP active headcount per campus and ADP job title, compared with the approved slots for that title. A positive difference is an overhire.</p>
   <div class="toolbar">
     <label class="chk"><input type="checkbox" id="over-only" checked> Show overhires only</label>
     <span class="count" id="over-count"></span>
@@ -114,34 +150,50 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   <div class="card scroll"><table id="t-over"></table></div>
 
   <h2>Person-level cross-check</h2>
-  <p class="sub">Every person on an approved FTE list matched to ADP by Position ID (or name when the Position ID changed), plus active ADP staff who are on no list. Red text marks the field that differs from ADP.</p>
+  <p class="sub">Every person on an approved FTE list matched to ADP by Position ID (or by name when the Position ID changed), plus active ADP staff who are on no list. Red text marks the field that differs from ADP.</p>
   <div class="toolbar">
     <input type="search" id="q" placeholder="Search name, title, Position ID…">
     <select id="f-campus"></select>
     <select id="f-status"></select>
-    <button class="btn" id="export">Export CSV</button>
+    <button class="btn" id="export" type="button">Export CSV</button>
     <span class="count" id="p-count"></span>
   </div>
   <div class="card scroll"><table id="t-people"></table></div>
   <p class="note" id="foot"></p>
 </main>
 
+<div class="modal-bg" id="modal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="m-title">
+    <div class="m-head">
+      <div><h3 id="m-title"></h3><p class="sub" id="m-sub" style="margin:2px 0 0"></p></div>
+      <button class="btn" id="m-close" type="button" aria-label="Close">&#x2715;</button>
+    </div>
+    <div class="toolbar" style="padding:0 16px">
+      <input type="search" id="m-q" placeholder="Search in this list…">
+      <button class="btn" id="m-export" type="button">Export CSV</button>
+      <span class="count" id="m-count"></span>
+    </div>
+    <div class="m-body"><table id="m-table"></table></div>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
 <script>
-const REPORT = __REPORT__;
+let REPORT = __REPORT__;
 
 const STATUS = {
-  MATCH:               { label: "Matches ADP",            cls: "p-ok" },
-  LOCATION_MISMATCH:   { label: "Location differs",       cls: "p-warn" },
-  TITLE_MISMATCH:      { label: "Title differs",          cls: "p-warn" },
-  NAME_MISMATCH:       { label: "Name differs",           cls: "p-info" },
-  NOT_ACTIVE_IN_ADP:   { label: "Terminated in ADP",      cls: "p-bad" },
-  NOT_IN_ADP:          { label: "Not found in ADP",       cls: "p-bad" },
-  NOT_ON_LIST:         { label: "Not on FTE list",        cls: "p-bad" },
-  NO_FTE_LIST:         { label: "No FTE list for campus", cls: "p-muted" },
+  MATCH:               { label: "Matches ADP",             cls: "p-ok" },
+  LOCATION_MISMATCH:   { label: "Location differs",        cls: "p-warn" },
+  TITLE_MISMATCH:      { label: "Title differs",           cls: "p-warn" },
+  NAME_MISMATCH:       { label: "Name differs",            cls: "p-info" },
+  NOT_ACTIVE_IN_ADP:   { label: "Terminated in ADP",       cls: "p-bad" },
+  NOT_IN_ADP:          { label: "Not found in ADP",        cls: "p-bad" },
+  NOT_ON_LIST:         { label: "Not on FTE list",         cls: "p-bad" },
+  DUPLICATE_ON_LIST:   { label: "Listed twice",            cls: "p-warn" },
+  NO_FTE_LIST:         { label: "No FTE list for campus",  cls: "p-muted" },
   VACANT_STILL_ACTIVE: { label: "Vacant but still active", cls: "p-info" },
-  OPEN:                { label: "Open slot",              cls: "p-muted" },
+  OPEN:                { label: "Open slot",               cls: "p-muted" },
 };
-// Filter keys: an issue filter matches any record carrying that issue
 const FILTERS = [
   ["ALL", "All records"],
   ["ANY_ISSUE", "Any discrepancy"],
@@ -150,101 +202,136 @@ const FILTERS = [
   ["NAME_MISMATCH", "Name differs"],
   ["NOT_ACTIVE", "On list, not active in ADP"],
   ["NOT_ON_LIST", "Active in ADP, not on list"],
+  ["DUPLICATE_ON_LIST", "Listed twice"],
   ["MATCH", "Matches ADP"],
   ["OPEN", "Open slots"],
 ];
+
+// One definition per number on the page; the Python report counts use the same rules.
+const METRICS = {
+  approved:          { label: "Approved slots",               test: r => r.source !== "ADP" },
+  adp_active:        { label: "Active in ADP",                test: r => r.adp_status === "Active", byAdpLocation: true },
+  matched:           { label: "Matches ADP",                  test: r => r.status === "MATCH" || r.status === "VACANT_STILL_ACTIVE" },
+  open:              { label: "Open slots",                   test: r => r.status === "OPEN" },
+  location_mismatch: { label: "Location differs from ADP",    test: r => r.issues.includes("LOCATION_MISMATCH") },
+  title_mismatch:    { label: "Title differs from ADP",       test: r => r.issues.includes("TITLE_MISMATCH") },
+  name_mismatch:     { label: "Name differs from ADP",        test: r => r.issues.includes("NAME_MISMATCH") },
+  not_active:        { label: "On list but not active in ADP", test: r => r.status === "NOT_ACTIVE_IN_ADP" || r.status === "NOT_IN_ADP" },
+  not_on_list:       { label: "Active in ADP but not on FTE list", test: r => r.status === "NOT_ON_LIST" },
+  duplicate:         { label: "Same person listed twice",     test: r => r.status === "DUPLICATE_ON_LIST" },
+};
 
 const state = { campus: "ALL", status: "ANY_ISSUE", q: "", sort: null, dir: 1 };
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const fmt = n => Number(n).toLocaleString();
+const campusName = code => (REPORT.campuses.find(c => c.code === code) || {}).campus || code;
+const campusCodes = () => new Set(REPORT.campuses.map(c => c.code));
 
 function matchesFilter(r, f) {
   if (f === "ALL") return true;
   if (f === "ANY_ISSUE") return r.issues.length > 0;
-  if (f === "NOT_ACTIVE") return r.status === "NOT_ACTIVE_IN_ADP" || r.status === "NOT_IN_ADP";
-  if (f === "MATCH") return r.status === "MATCH" || r.status === "VACANT_STILL_ACTIVE";
-  if (f === "OPEN") return r.status === "OPEN";
+  if (f === "NOT_ACTIVE") return METRICS.not_active.test(r);
+  if (f === "MATCH") return METRICS.matched.test(r);
+  if (f === "OPEN") return METRICS.open.test(r);
   return r.issues.includes(f);
 }
-
 function inCampus(r) { return state.campus === "ALL" || r.campus_code === state.campus; }
+
+// Records behind a metric for one campus (or ALL)
+function metricRecords(metric, campus) {
+  const m = METRICS[metric], codes = campusCodes();
+  return REPORT.records.filter(r => {
+    if (!m.test(r)) return false;
+    const loc = m.byAdpLocation ? r.adp_location_code : r.campus_code;
+    return campus === "ALL" ? codes.has(loc) : loc === campus;
+  });
+}
+
+// A clickable number. d = detail key, see openDetail()
+const num = (v, d, cls = "") => v === 0 || v === "0"
+  ? `<span class="dim">0</span>`
+  : `<button class="n ${cls}" type="button" data-d="${esc(d)}">${esc(v)}</button>`;
+
+/* ---------------------------------------------------------------- page */
 
 function renderMeta() {
   const lists = REPORT.campuses.filter(c => c.has_list).length;
   const nc = Object.entries(REPORT.non_campus_active || {}).map(([k, v]) => `${k} ${v}`).join(", ");
-  $("meta").textContent = `ADP pulled ${REPORT.adp_pulled_at} · ${lists} campus FTE lists · report built ${REPORT.generated_at}`;
+  $("meta").textContent = `ADP pulled ${REPORT.adp_pulled_at} · ${lists} campus FTE lists · cross-check run ${REPORT.generated_at}`;
   $("foot").textContent = `Central/regional office staff are not on campus FTE lists and are excluded from the counts (${nc}). ` +
     `Titles are compared by ADP job code (e.g. 11TEACH); the FTE list "Assignment" (grade/subject) is shown for reference only.`;
 }
 
 function renderKpis() {
-  const recs = REPORT.records.filter(inCampus);
-  const camps = REPORT.campuses.filter(c => state.campus === "ALL" || c.code === state.campus);
+  const C = state.campus;
+  const camps = REPORT.campuses.filter(c => C === "ALL" || c.code === C);
   const sum = k => camps.reduce((a, c) => a + c[k], 0);
-  const n = f => recs.filter(r => matchesFilter(r, f)).length;
+  const n = k => metricRecords(k, C).length;
   const tiles = [
-    ["Approved slots", sum("approved"), "on 2026-27 FTE lists", "", null],
-    ["ADP active", sum("adp_active"), "at these campus locations", "", null],
-    ["Matches ADP", n("MATCH"), "name, location & title agree", "ok", "MATCH"],
-    ["Location differs", n("LOCATION_MISMATCH"), "ADP campus ≠ FTE list campus", "warn", "LOCATION_MISMATCH"],
-    ["Title differs", n("TITLE_MISMATCH"), "ADP job title ≠ FTE list title", "warn", "TITLE_MISMATCH"],
-    ["Name differs", n("NAME_MISMATCH"), "same Position ID, different name", "info", "NAME_MISMATCH"],
-    ["On list, not active", n("NOT_ACTIVE"), "terminated / not found in ADP", "bad", "NOT_ACTIVE"],
-    ["Not on FTE list", n("NOT_ON_LIST"), "active in ADP, never approved", "bad", "NOT_ON_LIST"],
-    ["Overhire", sum("overhire"), "headcount above approved, by title", "bad", "OVERHIRE"],
+    ["Approved slots", sum("approved"), "on 2026-27 FTE lists", "", `m:approved:${C}`],
+    ["ADP active", sum("adp_active"), "at these campus locations", "", `m:adp_active:${C}`],
+    ["Matches ADP", n("matched"), "name, location & title agree", "ok", `m:matched:${C}`],
+    ["Location differs", n("location_mismatch"), "ADP campus ≠ FTE list campus", "warn", `m:location_mismatch:${C}`],
+    ["Title differs", n("title_mismatch"), "ADP job title ≠ FTE list title", "warn", `m:title_mismatch:${C}`],
+    ["Name differs", n("name_mismatch"), "same Position ID, different name", "info", `m:name_mismatch:${C}`],
+    ["On list, not active", n("not_active"), "terminated / not found in ADP", "bad", `m:not_active:${C}`],
+    ["Not on FTE list", n("not_on_list"), "active in ADP, never approved", "bad", `m:not_on_list:${C}`],
+    ["Listed twice", n("duplicate"), "same ADP person on 2 list rows", "warn", `m:duplicate:${C}`],
+    ["Overhire", sum("overhire"), "headcount above approved, by title", "bad", `t:over:${C}`],
   ];
-  $("kpis").innerHTML = tiles.map(([l, v, h, cls, f]) =>
-    `<button class="kpi ${cls} ${f && f === state.status ? "active" : ""}" data-f="${f || ""}">
-       <div class="lbl">${l}</div><div class="val">${fmt(v)}</div><div class="hint">${h}</div></button>`).join("");
-  $("kpis").querySelectorAll(".kpi").forEach(b => b.onclick = () => {
-    const f = b.dataset.f;
-    if (!f) return;
-    if (f === "OVERHIRE") { $("over-only").checked = true; renderOver(); $("t-over").scrollIntoView({ behavior: "smooth", block: "center" }); return; }
-    state.status = f; $("f-status").value = f; renderAll();
-    $("t-people").scrollIntoView({ behavior: "smooth", block: "start" });
-  });
+  $("kpis").innerHTML = tiles.map(([l, v, h, cls, d]) =>
+    `<button class="kpi ${cls}" type="button" data-d="${d}">
+       <div class="lbl">${l}${C === "ALL" ? "" : ` · ${esc(campusName(C))}`}</div>
+       <div class="val">${fmt(v)}</div><div class="hint">${h}</div></button>`).join("");
 }
 
 function renderCampus() {
-  const cols = [["Campus"], ["Region"], ["Approved", 1], ["ADP active", 1], ["Diff", 1], ["Matched", 1], ["Open slots", 1],
-    ["Location differs", 1], ["Title differs", 1], ["Not active in ADP", 1], ["Not on list", 1], ["Overhire", 1]];
-  const rows = REPORT.campuses.map(c => {
+  const heads = ["Campus", "Region", "Approved", "ADP active", "Diff", "Matched", "Open slots",
+    "Location differs", "Title differs", "Name differs", "Not active in ADP", "Not on list", "Overhire"];
+  const row = (c, code, label, bold) => {
     const d = c.adp_active - c.approved;
-    return `<tr class="click ${state.campus === c.code ? "sel" : ""}" data-c="${esc(c.code)}">
-      <td><b>${esc(c.campus)}</b> <span class="dim">(${esc(c.code)})</span>${c.has_list ? "" : ' <span class="pill p-muted">no FTE list</span>'}</td>
-      <td>${esc(c.region)}</td><td class="num">${c.approved}</td><td class="num">${c.adp_active}</td>
-      <td class="num ${d > 0 ? "over" : "under"}">${d > 0 ? "+" : ""}${d}</td>
-      <td class="num">${c.matched}</td><td class="num">${c.open}</td>
-      <td class="num">${c.location_mismatch || '<span class="dim">0</span>'}</td>
-      <td class="num">${c.title_mismatch || '<span class="dim">0</span>'}</td>
-      <td class="num">${c.not_active || '<span class="dim">0</span>'}</td>
-      <td class="num">${c.not_on_list ? `<span class="over">${c.not_on_list}</span>` : '<span class="dim">0</span>'}</td>
-      <td class="num">${c.overhire ? `<span class="over">+${c.overhire}</span>` : '<span class="dim">0</span>'}</td></tr>`;
-  });
+    const B = s => bold ? `<b>${s}</b>` : s;
+    return `<tr class="${state.campus === code ? "sel" : ""}">
+      <td>${label}</td><td>${bold ? "" : esc(c.region)}</td>
+      <td class="num">${B(num(c.approved, `m:approved:${code}`))}</td>
+      <td class="num">${B(num(c.adp_active, `m:adp_active:${code}`))}</td>
+      <td class="num">${num((d > 0 ? "+" : "") + d, `t:all:${code}`, d > 0 ? "over" : "under")}</td>
+      <td class="num">${num(c.matched, `m:matched:${code}`)}</td>
+      <td class="num">${num(c.open, `m:open:${code}`)}</td>
+      <td class="num">${num(c.location_mismatch, `m:location_mismatch:${code}`)}</td>
+      <td class="num">${num(c.title_mismatch, `m:title_mismatch:${code}`)}</td>
+      <td class="num">${num(c.name_mismatch || 0, `m:name_mismatch:${code}`)}</td>
+      <td class="num">${num(c.not_active, `m:not_active:${code}`)}</td>
+      <td class="num">${num(c.not_on_list, `m:not_on_list:${code}`, "over")}</td>
+      <td class="num">${num(c.overhire ? "+" + c.overhire : 0, `t:over:${code}`, "over")}</td></tr>`;
+  };
   const T = REPORT.campuses.reduce((a, c) => { for (const k in c) if (typeof c[k] === "number") a[k] = (a[k] || 0) + c[k]; return a; }, {});
-  rows.push(`<tr><td><b>All campuses</b></td><td></td><td class="num"><b>${T.approved}</b></td><td class="num"><b>${T.adp_active}</b></td>
-    <td class="num"><b>${T.adp_active - T.approved > 0 ? "+" : ""}${T.adp_active - T.approved}</b></td><td class="num"><b>${T.matched}</b></td>
-    <td class="num"><b>${T.open}</b></td><td class="num"><b>${T.location_mismatch}</b></td><td class="num"><b>${T.title_mismatch}</b></td>
-    <td class="num"><b>${T.not_active}</b></td><td class="num"><b>${T.not_on_list}</b></td><td class="num"><b>+${T.overhire}</b></td></tr>`);
-  $("t-campus").innerHTML = `<thead><tr>${cols.map(([h, n]) => `<th class="${n ? "num" : ""}">${h}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody>`;
-  $("t-campus").querySelectorAll("tr[data-c]").forEach(tr => tr.onclick = () => {
-    state.campus = state.campus === tr.dataset.c ? "ALL" : tr.dataset.c;
-    $("f-campus").value = state.campus; renderAll();
-  });
+  const rows = REPORT.campuses.map(c => row(c, c.code,
+    `<button class="link" type="button" data-campus="${esc(c.code)}"><b>${esc(c.campus)}</b></button> <span class="dim">(${esc(c.code)})</span>${c.has_list ? "" : ' <span class="pill p-muted">no FTE list</span>'}`));
+  rows.push(row(T, "ALL", "<b>All campuses</b>", true));
+  $("t-campus").innerHTML = `<thead><tr>${heads.map((h, i) => `<th class="${i > 1 ? "num" : ""}">${h}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody>`;
 }
+
+function titleRowsHtml(rows) {
+  if (!rows.length) return `<tr><td colspan="6" class="dim">Nothing to show for this selection.</td></tr>`;
+  return rows.map(t => {
+    const k = `${t.campus_code}|${t.job_code}`;
+    return `<tr><td>${esc(t.campus)}</td><td>${esc(t.job_code)} - ${esc(t.job_title)}</td>
+      <td class="num">${num(t.approved, `tc:approved:${k}`)}</td>
+      <td class="num">${num(t.adp_active, `tc:adp:${k}`)}</td>
+      <td class="num">${num((t.variance > 0 ? "+" : "") + t.variance, `tc:unapproved:${k}`, t.variance > 0 ? "over" : "under")}</td>
+      <td>${t.unapproved.map(esc).join(", ") || '<span class="dim">—</span>'}</td></tr>`;
+  }).join("");
+}
+const TITLE_HEAD = `<thead><tr><th>Campus</th><th>ADP job title</th><th class="num">Approved</th><th class="num">ADP active</th>
+  <th class="num">Difference</th><th>In ADP under this campus &amp; title without an approved slot for it</th></tr></thead>`;
 
 function renderOver() {
   const only = $("over-only").checked;
   const rows = REPORT.title_counts.filter(t => (state.campus === "ALL" || t.campus_code === state.campus) && (!only || t.variance > 0));
   $("over-count").textContent = `${rows.length} campus × title rows`;
-  $("t-over").innerHTML = `<thead><tr><th>Campus</th><th>ADP job title</th><th class="num">Approved</th><th class="num">ADP active</th>
-      <th class="num">Difference</th><th>In ADP under this campus &amp; title without an approved slot for it</th></tr></thead><tbody>` +
-    (rows.length ? rows.map(t => `<tr><td>${esc(t.campus)}</td><td>${esc(t.job_code)} - ${esc(t.job_title)}</td>
-      <td class="num">${t.approved}</td><td class="num">${t.adp_active}</td>
-      <td class="num ${t.variance > 0 ? "over" : "under"}">${t.variance > 0 ? "+" : ""}${t.variance}</td>
-      <td>${t.unapproved.map(esc).join(", ") || '<span class="dim">—</span>'}</td></tr>`).join("")
-      : `<tr><td colspan="6" class="dim">No overhires for this selection.</td></tr>`) + "</tbody>";
+  $("t-over").innerHTML = TITLE_HEAD + `<tbody>${titleRowsHtml(rows)}</tbody>`;
 }
 
 const PCOLS = [
@@ -253,68 +340,193 @@ const PCOLS = [
   ["adp_campus", "ADP location"], ["assignment", "Assignment"], ["list_status", "List status"], ["detail", "Notes"],
 ];
 
+function personRowHtml(r, extra = false) {
+  const iss = new Set(r.issues);
+  const pills = (r.issues.length ? r.issues : [r.status]).map(s => `<span class="pill ${STATUS[s].cls}">${STATUS[s].label}</span>`).join("");
+  const pid = r.adp_position_id && r.position_id && r.adp_position_id !== r.position_id
+    ? `${esc(r.position_id)}<br><span class="dim">ADP: ${esc(r.adp_position_id)}</span>` : esc(r.position_id || r.adp_position_id);
+  const dash = '<span class="dim">—</span>';
+  return `<tr><td>${pills}</td><td>${esc(r.campus)}</td><td>${esc(r.fte_name)}</td>
+    <td class="${iss.has("NAME_MISMATCH") ? "diff" : ""}">${esc(r.adp_name) || dash}</td>
+    <td>${pid}</td><td>${esc(r.fte_title) || dash}</td>
+    <td class="${iss.has("TITLE_MISMATCH") ? "diff" : ""}">${esc(r.adp_title) || dash}</td>
+    <td class="${iss.has("LOCATION_MISMATCH") ? "diff" : ""}">${esc(r.adp_campus) || dash}</td>
+    <td>${esc(r.assignment)}</td><td>${esc(r.list_status)}</td>
+    <td>${esc(r.detail)}</td>${extra ? `<td>${esc(r.worker_type)}</td><td class="dim">${esc(r.source)}</td>` : ""}</tr>`;
+}
+
 function filteredPeople() {
   const q = state.q.toLowerCase();
-  let rows = REPORT.records.filter(r => inCampus(r) && matchesFilter(r, state.status) &&
-    (!q || [r.fte_name, r.adp_name, r.fte_title, r.adp_title, r.position_id, r.adp_position_id, r.assignment, r.adp_campus]
-      .some(v => String(v || "").toLowerCase().includes(q))));
+  let rows = REPORT.records.filter(r => inCampus(r) && matchesFilter(r, state.status) && searchHit(r, q));
   if (state.sort) {
     const k = state.sort;
     rows = rows.slice().sort((a, b) => String(a[k] || "").localeCompare(String(b[k] || "")) * state.dir);
   }
   return rows;
 }
+function searchHit(r, q) {
+  return !q || [r.fte_name, r.adp_name, r.fte_title, r.adp_title, r.position_id, r.adp_position_id, r.assignment, r.adp_campus, r.campus]
+    .some(v => String(v || "").toLowerCase().includes(q));
+}
 
 function renderPeople() {
   const rows = filteredPeople();
   $("p-count").textContent = `${fmt(rows.length)} of ${fmt(REPORT.records.length)} records`;
   const shown = rows.slice(0, 1500);
-  const body = shown.map(r => {
-    const iss = new Set(r.issues);
-    const pills = (r.issues.length ? r.issues : [r.status]).map(s => `<span class="pill ${STATUS[s].cls}">${STATUS[s].label}</span>`).join("");
-    const pid = r.adp_position_id && r.position_id && r.adp_position_id !== r.position_id
-      ? `${esc(r.position_id)}<br><span class="dim">ADP: ${esc(r.adp_position_id)}</span>` : esc(r.position_id || r.adp_position_id);
-    return `<tr><td>${pills}</td><td>${esc(r.campus)}</td><td>${esc(r.fte_name)}</td>
-      <td class="${iss.has("NAME_MISMATCH") ? "diff" : ""}">${esc(r.adp_name) || '<span class="dim">—</span>'}</td>
-      <td>${pid}</td><td>${esc(r.fte_title)}</td>
-      <td class="${iss.has("TITLE_MISMATCH") ? "diff" : ""}">${esc(r.adp_title) || '<span class="dim">—</span>'}</td>
-      <td class="${iss.has("LOCATION_MISMATCH") ? "diff" : ""}">${esc(r.adp_campus) || '<span class="dim">—</span>'}</td>
-      <td>${esc(r.assignment)}</td><td>${esc(r.list_status)}</td>
-      <td>${esc(r.detail)}</td></tr>`;
-  }).join("");
-  $("t-people").innerHTML = `<thead><tr>${PCOLS.map(([k, h]) => `<th data-k="${k}">${h}${state.sort === k ? (state.dir > 0 ? " ▲" : " ▼") : ""}</th>`).join("")}</tr></thead>
-    <tbody>${body || `<tr><td colspan="${PCOLS.length}" class="dim">No records match these filters.</td></tr>`}
+  $("t-people").innerHTML = `<thead><tr>${PCOLS.map(([k, h]) => `<th class="sort" data-k="${k}">${h}${state.sort === k ? (state.dir > 0 ? " ▲" : " ▼") : ""}</th>`).join("")}</tr></thead>
+    <tbody>${shown.map(r => personRowHtml(r)).join("") || `<tr><td colspan="${PCOLS.length}" class="dim">No records match these filters.</td></tr>`}
     ${rows.length > shown.length ? `<tr><td colspan="${PCOLS.length}" class="dim">Showing first ${shown.length}; narrow the filters or export CSV for all.</td></tr>` : ""}</tbody>`;
-  $("t-people").querySelectorAll("th").forEach(th => th.onclick = () => {
-    const k = th.dataset.k;
-    state.dir = state.sort === k ? -state.dir : 1; state.sort = k; renderPeople();
-  });
 }
 
-function exportCsv() {
-  const cols = ["status", "issues", "campus", "fte_name", "adp_name", "position_id", "adp_position_id", "fte_title", "adp_title",
-    "adp_campus", "adp_location", "worker_type", "assignment", "list_status", "notes", "adp_status", "detail", "source"];
+/* ---------------------------------------------------------------- details panel */
+
+const modal = { kind: null, rows: [], title: "" };
+
+function openDetail(key) {
+  const [kind, a, b] = key.split(":");
+  const scope = c => c === "ALL" ? "all campuses" : campusName(c);
+  if (kind === "m") {
+    modal.kind = "people";
+    modal.rows = metricRecords(a, b);
+    modal.title = `${METRICS[a].label} — ${scope(b)}`;
+    modal.sub = a === "adp_active" ? "Staff whose ADP Position tab location is this campus, with the FTE list row they matched (if any)."
+      : a === "approved" ? "Every approved slot on the FTE list, with what ADP shows for the person in it." : "";
+  } else if (kind === "t") {
+    modal.kind = "titles";
+    modal.rows = REPORT.title_counts.filter(t => (b === "ALL" || t.campus_code === b) && (a === "all" || t.variance > 0));
+    modal.title = `${a === "over" ? "Overhires by job title" : "Approved vs. ADP by job title"} — ${scope(b)}`;
+    modal.sub = "Click a number to see the people behind it.";
+  } else if (kind === "tc") {
+    const [code, job] = b.split("|");
+    const t = REPORT.title_counts.find(x => x.campus_code === code && x.job_code === job) || {};
+    modal.kind = "people";
+    if (a === "approved") {
+      modal.rows = REPORT.records.filter(r => r.source !== "ADP" && r.campus_code === code && r.fte_job_code === job);
+      modal.title = `Approved ${job} slots — ${campusName(code)}`;
+    } else {
+      const adp = REPORT.records.filter(r => r.adp_status === "Active" && r.adp_location_code === code && r.adp_job_code === job);
+      modal.rows = a === "adp" ? adp : adp.filter(r => r.campus_code !== code || r.fte_job_code !== job);
+      modal.title = a === "adp" ? `Active in ADP as ${job} — ${campusName(code)}` : `${job} at ${campusName(code)} without an approved slot`;
+    }
+    modal.sub = `${t.job_title || ""}: ${t.approved ?? 0} approved, ${t.adp_active ?? 0} active in ADP.`;
+  }
+  $("m-q").value = "";
+  renderModal();
+  $("modal").hidden = false;
+  document.body.style.overflow = "hidden";
+  $("m-close").focus();
+}
+
+function renderModal() {
+  const q = $("m-q").value.toLowerCase();
+  $("m-title").textContent = modal.title;
+  $("m-sub").textContent = modal.sub || "";
+  if (modal.kind === "titles") {
+    const rows = modal.rows.filter(t => !q || `${t.campus} ${t.job_code} ${t.job_title} ${t.unapproved.join(" ")}`.toLowerCase().includes(q));
+    $("m-count").textContent = `${rows.length} rows`;
+    $("m-table").innerHTML = TITLE_HEAD + `<tbody>${titleRowsHtml(rows)}</tbody>`;
+  } else {
+    const rows = modal.rows.filter(r => searchHit(r, q));
+    $("m-count").textContent = `${fmt(rows.length)} people / positions`;
+    $("m-table").innerHTML = `<thead><tr>${PCOLS.map(([, h]) => `<th>${h}</th>`).join("")}<th>Worker type</th><th>Source</th></tr></thead>
+      <tbody>${rows.map(r => personRowHtml(r, true)).join("") || `<tr><td colspan="13" class="dim">No records.</td></tr>`}</tbody>`;
+  }
+}
+
+function closeModal() { $("modal").hidden = true; document.body.style.overflow = ""; }
+
+/* ---------------------------------------------------------------- export */
+
+function downloadCsv(name, rows, cols) {
   const cell = v => `"${String(Array.isArray(v) ? v.join("; ") : v ?? "").replace(/"/g, '""')}"`;
-  const csv = [cols.join(",")].concat(filteredPeople().map(r => cols.map(c => cell(r[c])).join(","))).join("\n");
+  const csv = [cols.join(",")].concat(rows.map(r => cols.map(c => cell(r[c])).join(","))).join("\n");
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-  a.download = `fte_adp_crosscheck_${state.campus}_${state.status}.csv`.replace(/\s+/g, "_");
+  a.download = name.replace(/[^\w.-]+/g, "_");
   a.click();
 }
+const PEOPLE_CSV = ["status", "issues", "campus", "fte_name", "adp_name", "position_id", "adp_position_id", "fte_title", "adp_title",
+  "adp_campus", "adp_location", "worker_type", "assignment", "list_status", "notes", "adp_status", "detail", "source"];
+
+/* ---------------------------------------------------------------- re-run */
+
+let API = false;
+async function detectApi() {
+  try {
+    const r = await fetch("/api/status", { cache: "no-store" });
+    API = r.ok && (await r.json()).ok === true;
+  } catch (e) { API = false; }
+  $("run").title = API ? "Pull ADP live, re-read the FTE list files and redo the cross-check"
+    : "Re-running needs the local app (ADP credentials stay on your computer). Double-click “Run FTE Cross-Check.command” in the project folder.";
+  $("run").classList.toggle("off", !API);
+}
+
+async function runCrosscheck() {
+  if (!API) { toast($("run").title, "warn"); return; }
+  const btn = $("run");
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Running…';
+  $("run-msg").textContent = "Pulling ADP and re-reading FTE lists (takes 3–4 minutes)…";
+  const before = REPORT.campuses.reduce((a, c) => a + c.overhire, 0);
+  try {
+    const r = await fetch("/api/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || r.statusText);
+    REPORT = data;
+    renderMeta(); populateCampusFilter(); renderAll();
+    const after = REPORT.campuses.reduce((a, c) => a + c.overhire, 0);
+    toast(`Cross-check complete — ADP pulled ${REPORT.adp_pulled_at}. Overhire ${before} → ${after}.`, "ok");
+    $("run-msg").textContent = "";
+  } catch (e) {
+    toast("Cross-check failed: " + e.message, "bad");
+    $("run-msg").textContent = "";
+  } finally {
+    btn.disabled = false; btn.innerHTML = "&#x21bb; Run cross-check";
+  }
+}
+
+function toast(msg, kind) {
+  const t = $("toast");
+  t.textContent = msg; t.className = `toast t-${kind}`; t.hidden = false;
+  clearTimeout(toast.h); toast.h = setTimeout(() => t.hidden = true, 7000);
+}
+
+/* ---------------------------------------------------------------- wiring */
 
 function renderAll() { renderKpis(); renderCampus(); renderOver(); renderPeople(); }
 
-function init() {
+function populateCampusFilter() {
   $("f-campus").innerHTML = `<option value="ALL">All campuses</option>` +
     REPORT.campuses.map(c => `<option value="${esc(c.code)}">${esc(c.campus)}</option>`).join("");
+  $("f-campus").value = state.campus;
+}
+
+function init() {
+  populateCampusFilter();
   $("f-status").innerHTML = FILTERS.map(([k, l]) => `<option value="${k}">${l}</option>`).join("");
   $("f-status").value = state.status;
   $("f-campus").onchange = e => { state.campus = e.target.value; renderAll(); };
   $("f-status").onchange = e => { state.status = e.target.value; renderAll(); };
   $("q").oninput = e => { state.q = e.target.value; renderPeople(); };
   $("over-only").onchange = renderOver;
-  $("export").onclick = exportCsv;
-  renderMeta(); renderAll();
+  $("export").onclick = () => downloadCsv(`fte_adp_crosscheck_${state.campus}_${state.status}.csv`, filteredPeople(), PEOPLE_CSV);
+  $("m-q").oninput = renderModal;
+  $("m-close").onclick = closeModal;
+  $("modal").onclick = e => { if (e.target.id === "modal") closeModal(); };
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("modal").hidden) closeModal(); });
+  $("m-export").onclick = () => modal.kind === "titles"
+    ? downloadCsv(`${modal.title}.csv`, modal.rows, ["campus", "job_code", "job_title", "approved", "adp_active", "variance", "unapproved"])
+    : downloadCsv(`${modal.title}.csv`, modal.rows, PEOPLE_CSV);
+  $("run").onclick = runCrosscheck;
+  // One delegated handler for every clickable number, campus name and sortable header
+  document.addEventListener("click", e => {
+    const d = e.target.closest("[data-d]");
+    if (d) { openDetail(d.dataset.d); return; }
+    const c = e.target.closest("[data-campus]");
+    if (c) { state.campus = state.campus === c.dataset.campus ? "ALL" : c.dataset.campus; $("f-campus").value = state.campus; renderAll(); return; }
+    const th = e.target.closest("th.sort");
+    if (th) { const k = th.dataset.k; state.dir = state.sort === k ? -state.dir : 1; state.sort = k; renderPeople(); }
+  });
+  renderMeta(); renderAll(); detectApi();
 }
 init();
 </script>

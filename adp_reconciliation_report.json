@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-09-23 11:49",
+ "generated_at": "2026-09-23 12:09",
  "campuses": [
   {
    "campus": "SST San Antonio College Prep",
@@ -14,6 +14,7 @@
    "location_mismatch": 9,
    "title_mismatch": 5,
    "name_mismatch": 0,
+   "duplicate": 0,
    "not_active": 11,
    "not_on_list": 14,
    "overhire": 0
@@ -31,6 +32,7 @@
    "location_mismatch": 3,
    "title_mismatch": 5,
    "name_mismatch": 1,
+   "duplicate": 0,
    "not_active": 12,
    "not_on_list": 10,
    "overhire": 0
@@ -48,6 +50,7 @@
    "location_mismatch": 0,
    "title_mismatch": 1,
    "name_mismatch": 1,
+   "duplicate": 0,
    "not_active": 10,
    "not_on_list": 9,
    "overhire": 5
@@ -65,6 +68,7 @@
    "location_mismatch": 6,
    "title_mismatch": 5,
    "name_mismatch": 1,
+   "duplicate": 0,
    "not_active": 21,
    "not_on_list": 17,
    "overhire": 0
@@ -82,6 +86,7 @@
    "location_mismatch": 5,
    "title_mismatch": 6,
    "name_mismatch": 0,
+   "duplicate": 0,
    "not_active": 12,
    "not_on_list": 10,
    "overhire": 0
@@ -99,6 +104,7 @@
    "location_mismatch": 4,
    "title_mismatch": 5,
    "name_mismatch": 1,
+   "duplicate": 0,
    "not_active": 17,
    "not_on_list": 15,
    "overhire": 0
@@ -113,9 +119,10 @@
    "adp_active": 51,
    "matched": 40,
    "open": 1,
-   "location_mismatch": 3,
-   "title_mismatch": 5,
+   "location_mismatch": 1,
+   "title_mismatch": 3,
    "name_mismatch": 0,
+   "duplicate": 2,
    "not_active": 14,
    "not_on_list": 8,
    "overhire": 4
@@ -130,9 +137,10 @@
    "adp_active": 52,
    "matched": 35,
    "open": 0,
-   "location_mismatch": 2,
-   "title_mismatch": 6,
+   "location_mismatch": 1,
+   "title_mismatch": 5,
    "name_mismatch": 0,
+   "duplicate": 1,
    "not_active": 14,
    "not_on_list": 13,
    "overhire": 1
@@ -150,6 +158,7 @@
    "location_mismatch": 0,
    "title_mismatch": 2,
    "name_mismatch": 0,
+   "duplicate": 0,
    "not_active": 3,
    "not_on_list": 17,
    "overhire": 6
@@ -167,6 +176,7 @@
    "location_mismatch": 2,
    "title_mismatch": 2,
    "name_mismatch": 0,
+   "duplicate": 0,
    "not_active": 0,
    "not_on_list": 18,
    "overhire": 9
@@ -184,6 +194,7 @@
    "location_mismatch": 0,
    "title_mismatch": 2,
    "name_mismatch": 0,
+   "duplicate": 0,
    "not_active": 2,
    "not_on_list": 1,
    "overhire": 2
@@ -201,6 +212,7 @@
    "location_mismatch": 0,
    "title_mismatch": 2,
    "name_mismatch": 0,
+   "duplicate": 0,
    "not_active": 9,
    "not_on_list": 15,
    "overhire": 4
@@ -218,6 +230,7 @@
    "location_mismatch": 3,
    "title_mismatch": 2,
    "name_mismatch": 1,
+   "duplicate": 0,
    "not_active": 15,
    "not_on_list": 13,
    "overhire": 2
@@ -235,6 +248,7 @@
    "location_mismatch": 2,
    "title_mismatch": 1,
    "name_mismatch": 0,
+   "duplicate": 0,
    "not_active": 9,
    "not_on_list": 8,
    "overhire": 1
@@ -252,6 +266,7 @@
    "location_mismatch": 4,
    "title_mismatch": 1,
    "name_mismatch": 0,
+   "duplicate": 0,
    "not_active": 16,
    "not_on_list": 17,
    "overhire": 0
@@ -269,6 +284,7 @@
    "location_mismatch": 2,
    "title_mismatch": 4,
    "name_mismatch": 0,
+   "duplicate": 0,
    "not_active": 10,
    "not_on_list": 17,
    "overhire": 2
@@ -286,6 +302,7 @@
    "location_mismatch": 0,
    "title_mismatch": 0,
    "name_mismatch": 1,
+   "duplicate": 0,
    "not_active": 17,
    "not_on_list": 21,
    "overhire": 2
@@ -297,14 +314,15 @@
    "has_list": true,
    "fte_file": "SST The Woodlands 2026-27 Approved FTE List.xlsx",
    "approved": 61,
-   "adp_active": 52,
+   "adp_active": 53,
    "matched": 40,
    "open": 2,
    "location_mismatch": 0,
    "title_mismatch": 3,
    "name_mismatch": 1,
+   "duplicate": 0,
    "not_active": 16,
-   "not_on_list": 7,
+   "not_on_list": 8,
    "overhire": 0
   },
   {
@@ -315,12 +333,13 @@
    "fte_file": "SST Willow Creek 2026-27 Approved FTE List.xlsx",
    "approved": 38,
    "adp_active": 31,
-   "matched": 25,
+   "matched": 24,
    "open": 5,
-   "location_mismatch": 2,
+   "location_mismatch": 1,
    "title_mismatch": 0,
    "name_mismatch": 0,
-   "not_active": 6,
+   "duplicate": 1,
+   "not_active": 7,
    "not_on_list": 4,
    "overhire": 0
   },
@@ -337,6 +356,7 @@
    "location_mismatch": 3,
    "title_mismatch": 0,
    "name_mismatch": 1,
+   "duplicate": 0,
    "not_active": 10,
    "not_on_list": 12,
    "overhire": 2
@@ -354,6 +374,7 @@
    "location_mismatch": 1,
    "title_mismatch": 2,
    "name_mismatch": 0,
+   "duplicate": 0,
    "not_active": 5,
    "not_on_list": 5,
    "overhire": 2
@@ -371,6 +392,7 @@
    "location_mismatch": 4,
    "title_mismatch": 1,
    "name_mismatch": 1,
+   "duplicate": 0,
    "not_active": 15,
    "not_on_list": 10,
    "overhire": 0
@@ -388,6 +410,7 @@
    "location_mismatch": 4,
    "title_mismatch": 8,
    "name_mismatch": 0,
+   "duplicate": 0,
    "not_active": 12,
    "not_on_list": 15,
    "overhire": 1
@@ -759,7 +782,6 @@
     "Ceaton Toups",
     "Christina Conner (on SST San Antonio College Prep list)",
     "Christina Williams",
-    "Diana Hernandez (on SST Schertz Early Elementary list)",
     "Emily Rodriguez",
     "Valerie Garcia"
    ]
@@ -2057,9 +2079,7 @@
    "approved": 2,
    "adp_active": 2,
    "variance": 0,
-   "unapproved": [
-    "Maria Perez (on SST Schertz Early Elementary list)"
-   ]
+   "unapproved": []
   },
   {
    "campus": "SST Advancement",
@@ -2311,7 +2331,6 @@
    "unapproved": [
     "Allison Rodrigues",
     "Dovlet Hudayberdiyev (on SST Spring list)",
-    "Juan Garcia Reyes (on SST Willow Creek list)",
     "Juan Raz",
     "Kelsie Prevost",
     "Seyma Oz",
@@ -2899,13 +2918,14 @@
    "job_code": "11TEACH",
    "job_title": "TEACHER",
    "approved": 38,
-   "adp_active": 33,
-   "variance": -5,
+   "adp_active": 34,
+   "variance": -4,
    "unapproved": [
     "Christia Anderson",
     "Elena Chuian (listed as 11EA)",
     "Jennifer Daniels",
     "Karina Chavarria (listed as 11EA)",
+    "Mariana Juarez",
     "Starr Morado (on NF Greg Garcia list)"
    ]
   },
@@ -3632,9 +3652,7 @@
    "approved": 2,
    "adp_active": 2,
    "variance": 0,
-   "unapproved": [
-    "Valerie Gomez (on SST Schertz Elementary list)"
-   ]
+   "unapproved": []
   },
   {
    "campus": "SST Corpus Christi College Prep",
@@ -14491,14 +14509,13 @@
    "adp_location": "015831 001 SST Discovery",
    "adp_campus": "SST Discovery",
    "worker_type": "Full Time",
-   "adp_status": "Active",
+   "adp_status": "Active (counted on another row)",
    "issues": [
-    "LOCATION_MISMATCH",
-    "TITLE_MISMATCH"
+    "DUPLICATE_ON_LIST"
    ],
-   "detail": "Old Position ID ELA110261 is terminated; person is active under a new position",
+   "detail": "Same ADP person is also on the SST Discovery list (SST Discovery 2026-27 Approved FTE List.xlsx (row 44)); this row is an extra slot",
    "adp_location_code": "DIS",
-   "status": "LOCATION_MISMATCH"
+   "status": "DUPLICATE_ON_LIST"
   },
   {
    "campus": "SST Schertz Early Elementary",
@@ -14984,14 +15001,13 @@
    "adp_location": "015831 003 SST Advancement",
    "adp_campus": "SST Advancement",
    "worker_type": "Full Time",
-   "adp_status": "Active",
+   "adp_status": "Active (counted on another row)",
    "issues": [
-    "LOCATION_MISMATCH",
-    "TITLE_MISMATCH"
+    "DUPLICATE_ON_LIST"
    ],
-   "detail": "Old Position ID ELA109984 is terminated; person is active under a new position",
+   "detail": "Same ADP person is also on the SST Advancement list (SST Advancement.xlsx (row 50)); this row is an extra slot",
    "adp_location_code": "ADV",
-   "status": "LOCATION_MISMATCH"
+   "status": "DUPLICATE_ON_LIST"
   },
   {
    "campus": "SST Schertz Early Elementary",
@@ -15899,14 +15915,13 @@
    "adp_location": "015831 002-2 SST CC College Prep",
    "adp_campus": "SST Corpus Christi College Prep",
    "worker_type": "Full Time",
-   "adp_status": "Active",
+   "adp_status": "Active (counted on another row)",
    "issues": [
-    "LOCATION_MISMATCH",
-    "TITLE_MISMATCH"
+    "DUPLICATE_ON_LIST"
    ],
-   "detail": "Old Position ID ELA110728 is terminated; person is active under a new position",
+   "detail": "Same ADP person is also on the SST Corpus Christi College Prep list (SST Corpus Christi CP.xlsx (row 28)); this row is an extra slot",
    "adp_location_code": "CCH",
-   "status": "LOCATION_MISMATCH"
+   "status": "DUPLICATE_ON_LIST"
   },
   {
    "campus": "SST Schertz Elementary",
@@ -31006,11 +31021,13 @@
    "adp_location": "015827 004 Willow Creek",
    "adp_campus": "SST Willow Creek",
    "worker_type": "Full Time",
-   "adp_status": "Active",
-   "issues": [],
-   "detail": "",
+   "adp_status": "Active (counted on another row)",
+   "issues": [
+    "DUPLICATE_ON_LIST"
+   ],
+   "detail": "Same ADP person is also on the SST Willow Creek list (SST Willow Creek 2026-27 Approved FTE List.xlsx (row 10)); this row is an extra slot",
    "adp_location_code": "WC",
-   "status": "MATCH"
+   "status": "DUPLICATE_ON_LIST"
   },
   {
    "campus": "SST Willow Creek",
@@ -31023,20 +31040,20 @@
    "notes": "",
    "position_id": "ELA100768",
    "source": "SST Willow Creek 2026-27 Approved FTE List.xlsx (row 18)",
-   "adp_name": "Juan Garcia Reyes",
-   "adp_position_id": "ELA109752",
+   "adp_name": "Juana Garcia",
+   "adp_position_id": "ELA100768",
    "adp_title": "11TEACH - TEACHER",
    "adp_job_code": "11TEACH",
-   "adp_location": "015827 006-2 SST Champions College Prep",
-   "adp_campus": "SST Champions College Prep",
+   "adp_location": "015827 004 Willow Creek",
+   "adp_campus": "SST Willow Creek",
    "worker_type": "Full Time",
-   "adp_status": "Active",
+   "adp_status": "Terminated (2026-09-11)",
    "issues": [
-    "LOCATION_MISMATCH"
+    "NOT_ACTIVE_IN_ADP"
    ],
-   "detail": "Old Position ID ELA100768 is terminated; person is active under a new position",
-   "adp_location_code": "CH",
-   "status": "LOCATION_MISMATCH"
+   "detail": "Terminated in ADP since 2026-09-11 \u2014 slot is actually open",
+   "adp_location_code": "WC",
+   "status": "NOT_ACTIVE_IN_ADP"
   },
   {
    "campus": "SST Willow Creek",
@@ -41585,6 +41602,32 @@
    "detail": "Active in ADP at this campus but not on its approved FTE list"
   },
   {
+   "campus": "SST The Woodlands",
+   "campus_code": "TW",
+   "fte_name": "\u2014 Not on FTE list \u2014",
+   "fte_title": "",
+   "fte_job_code": "",
+   "assignment": "",
+   "list_status": "",
+   "notes": "",
+   "position_id": "",
+   "source": "ADP",
+   "adp_name": "Mariana Juarez",
+   "adp_position_id": "ELA110959",
+   "adp_title": "11TEACH - TEACHER",
+   "adp_job_code": "11TEACH",
+   "adp_location": "015827 003 SST The Woodlands",
+   "adp_location_code": "TW",
+   "adp_campus": "SST The Woodlands",
+   "worker_type": "Full Time",
+   "adp_status": "Active",
+   "status": "NOT_ON_LIST",
+   "issues": [
+    "NOT_ON_LIST"
+   ],
+   "detail": "Active in ADP at this campus but not on its approved FTE list"
+  },
+  {
    "campus": "SST San Antonio College Prep",
    "campus_code": "SACP",
    "fte_name": "\u2014 Not on FTE list \u2014",
@@ -45595,6 +45638,6 @@
   "(none)": 3,
   "Regional Office - San Antonio": 17
  },
- "adp_active_total": 1475,
- "adp_pulled_at": "2026-09-23 11:44"
+ "adp_active_total": 1476,
+ "adp_pulled_at": "2026-09-23 12:05"
 }
