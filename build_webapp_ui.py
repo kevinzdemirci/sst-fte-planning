@@ -32,7 +32,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     --bad: #b91c1c; --bad-bg: #fee2e2;
     --info: #1d4ed8; --info-bg: #dbeafe;
     --muted-bg: #f1f5f9;
-    --focus: #2563eb;
+    --focus: #2563eb; --bar: #133968;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
@@ -40,7 +40,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
       --ink: #e5e9f0; --ink-2: #aab4c3; --ink-3: #8592a6;
       --ok: #4ade80; --ok-bg: #12301f; --warn: #fbbf24; --warn-bg: #3a2a0a;
       --bad: #f87171; --bad-bg: #3b1414; --info: #93c5fd; --info-bg: #13274a;
-      --muted-bg: #1a2438; --focus: #60a5fa;
+      --muted-bg: #1a2438; --focus: #60a5fa; --bar: #60a5fa;
     }
   }
   * { box-sizing: border-box; }
@@ -118,6 +118,12 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   .t-ok { background: var(--ok-bg); color: var(--ok); } .t-bad { background: var(--bad-bg); color: var(--bad); }
   .t-warn { background: var(--warn-bg); color: var(--warn); }
   button.kpi { width: 100%; }
+  .bar { position: relative; height: 10px; min-width: 120px; background: var(--muted-bg); border-radius: 3px; }
+  .bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--bar); border-radius: 0 4px 4px 0; }
+  .bar b { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--ink); }
+  .mx td, .mx th { text-align: right; } .mx td:first-child, .mx th:first-child { text-align: left; position: sticky; left: 0; background: var(--surface); }
+  .mx th:first-child { background: var(--surface-2); z-index: 2; }
+  .mx .ap { color: var(--ink-3); font-size: 11px; }
   @media (max-width: 640px) { header { padding: 12px 16px; } .kpi .val { font-size: 22px; } }
 </style>
 </head>
@@ -148,6 +154,22 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     <span class="count" id="over-count"></span>
   </div>
   <div class="card scroll"><table id="t-over"></table></div>
+
+  <h2>Staffing by job title</h2>
+  <p class="sub">How many people each campus has in a job title or group: approved on the FTE list vs. active in ADP. Click any number for the names.</p>
+  <div class="toolbar">
+    <select id="jt-title" aria-label="Job title"></select>
+    <select id="jt-region" aria-label="Region">
+      <option value="ALL">All regions</option><option>San Antonio</option><option>Houston</option><option>Corpus Christi</option>
+    </select>
+    <select id="jt-view" aria-label="View">
+      <option value="campus">Totals per campus</option>
+      <option value="matrix">Campus × title matrix</option>
+    </select>
+    <span class="count" id="jt-count"></span>
+  </div>
+  <div class="card scroll" style="max-height:none"><table id="t-jt"></table></div>
+  <p class="note" id="jt-legend"></p>
 
   <h2>Person-level cross-check</h2>
   <p class="sub">Every person on an approved FTE list matched to ADP by Position ID (or by name when the Position ID changed), plus active ADP staff who are on no list. Red text marks the field that differs from ADP.</p>
@@ -380,6 +402,111 @@ function renderPeople() {
     ${rows.length > shown.length ? `<tr><td colspan="${PCOLS.length}" class="dim">Showing first ${shown.length}; narrow the filters or export CSV for all.</td></tr>` : ""}</tbody>`;
 }
 
+
+/* ---------------------------------------------------------------- staffing by job title */
+
+const TITLE_GROUPS = [
+  ["TEACHERS", "Teachers", (c, t) => /TEACH/.test(c) || /TEACHER/i.test(t)],
+  ["ADMIN", "Campus administration (Principal, AP, Ops Manager)", c => ["23PRI", "23AP", "23OPS"].includes(c)],
+  ["AIDES", "Educational aides", c => c === "11EA"],
+  ["COORD", "Coordinators (Hub / Regional)", c => /CRD$/.test(c)],
+  ["OFFICE", "Office staff (Front office, Admin asst, Registrar, Secretary)", c => ["23FRONTO", "41ADMAST", "23REGIST", "23SEC", "23ATTEND"].includes(c)],
+  ["SUPPORT", "Support services (Medical, Lunch, IT, Library)", c => ["33MEDAST", "35LUNCH", "23ITSPC", "11LIBR"].includes(c)],
+];
+
+function allTitles() {
+  const m = new Map();
+  REPORT.title_counts.forEach(t => {
+    const x = m.get(t.job_code) || { code: t.job_code, title: t.job_title, adp: 0 };
+    x.adp += t.adp_active; m.set(t.job_code, x);
+  });
+  return [...m.values()].sort((a, b) => b.adp - a.adp || a.code.localeCompare(b.code));
+}
+
+function selectedCodes() {
+  const v = $("jt-title").value, titles = allTitles();
+  if (v === "ALL") return titles.map(t => t.code);
+  const g = TITLE_GROUPS.find(([k]) => k === v);
+  if (g) return titles.filter(t => g[2](t.code, t.title)).map(t => t.code);
+  return [v];
+}
+
+function populateTitleFilter() {
+  const cur = $("jt-title").value || "TEACHERS", titles = allTitles();
+  const groups = TITLE_GROUPS.map(([k, l, f]) => {
+    const n = titles.filter(t => f(t.code, t.title)).length;
+    return n ? `<option value="${k}">${esc(l)}</option>` : "";
+  }).join("");
+  $("jt-title").innerHTML = `<option value="ALL">All job titles</option><optgroup label="Groups">${groups}</optgroup>` +
+    `<optgroup label="Individual titles">${titles.map(t => `<option value="${esc(t.code)}">${esc(t.code)} - ${esc(t.title)}</option>`).join("")}</optgroup>`;
+  $("jt-title").value = [...$("jt-title").options].some(o => o.value === cur) ? cur : "TEACHERS";
+}
+
+function renderJobTitles() {
+  const codes = selectedCodes(), set = new Set(codes), region = $("jt-region").value;
+  const camps = REPORT.campuses.filter(c => c.has_list && (region === "ALL" || c.region === region)
+    && (state.campus === "ALL" || c.code === state.campus));
+  const tc = (camp, code) => REPORT.title_counts.find(t => t.campus_code === camp && t.job_code === code);
+  const sumFor = (camp, cs) => cs.reduce((a, code) => {
+    const t = tc(camp, code); if (t) { a.ap += t.approved; a.adp += t.adp_active; } return a;
+  }, { ap: 0, adp: 0 });
+  const key = codes.join(",");
+  const campKey = camps.length === REPORT.campuses.filter(c => c.has_list).length ? "ALL" : camps.map(c => c.code).join("+");
+
+  if ($("jt-view").value === "matrix") {
+    const cols = allTitles().filter(t => set.has(t.code));
+    const cell = (camp, code) => {
+      const t = tc(camp, code) || { approved: 0, adp_active: 0 };
+      if (!t.approved && !t.adp_active) return `<td><span class="dim">·</span></td>`;
+      const d = t.adp_active - t.approved;
+      return `<td>${num(t.adp_active, `g:adp:${camp}:${code}`, d > 0 ? "over" : "")}<div class="ap">of ${t.approved}</div></td>`;
+    };
+    const tot = code => camps.reduce((a, c) => { const t = tc(c.code, code); if (t) { a.ap += t.approved; a.adp += t.adp_active; } return a; }, { ap: 0, adp: 0 });
+    $("t-jt").className = "mx";
+    $("t-jt").innerHTML = `<thead><tr><th>Campus</th>${cols.map(t => `<th title="${esc(t.title)}" style="white-space:normal;min-width:90px">${esc(t.code)}<div class="ap" style="font-weight:400">${esc(t.title.toLowerCase())}</div></th>`).join("")}</tr></thead><tbody>` +
+      camps.map(c => `<tr><td><b>${esc(c.campus)}</b></td>${cols.map(t => cell(c.code, t.code)).join("")}</tr>`).join("") +
+      `<tr><td><b>Total</b></td>${cols.map(t => { const x = tot(t.code);
+        return `<td><b>${num(x.adp, `g:adp:${campKey}:${t.code}`, x.adp > x.ap ? "over" : "")}</b><div class="ap">of ${x.ap}</div></td>`; }).join("")}</tr></tbody>`;
+    $("jt-count").textContent = `${camps.length} campuses × ${cols.length} titles`;
+    $("jt-legend").textContent = "Each cell: active in ADP, with approved slots underneath (\u201cof N\u201d). Red = more active in ADP than approved.";
+    return;
+  }
+
+  const rows = camps.map(c => ({ c, ...sumFor(c.code, codes) }));
+  const max = Math.max(1, ...rows.map(r => Math.max(r.ap, r.adp)));
+  const T = rows.reduce((a, r) => ({ ap: a.ap + r.ap, adp: a.adp + r.adp }), { ap: 0, adp: 0 });
+  const line = (label, region, camp, ap, adp, bold) => {
+    const d = adp - ap, B = x => bold ? `<b>${x}</b>` : x;
+    return `<tr><td>${B(label)}</td><td>${region}</td>
+      <td class="num">${B(num(ap, `g:approved:${camp}:${key}`))}</td>
+      <td class="num">${B(num(adp, `g:adp:${camp}:${key}`))}</td>
+      <td class="num">${num((d > 0 ? "+" : "") + d, `gt:${camp}:${key}`, d > 0 ? "over" : "under")}</td>
+      <td>${bold ? "" : `<div class="bar" title="${adp} active in ADP, ${ap} approved"><i style="width:${adp / max * 100}%"></i><b style="left:calc(${ap / max * 100}% - 1px)"></b></div>`}</td></tr>`;
+  };
+  $("t-jt").className = "";
+  $("t-jt").innerHTML = `<thead><tr><th>Campus</th><th>Region</th><th class="num">Approved</th><th class="num">ADP active</th>
+      <th class="num">Difference</th><th style="width:28%">ADP active vs. approved</th></tr></thead><tbody>` +
+    rows.map(r => line(`<b>${esc(r.c.campus)}</b>`, esc(r.c.region), r.c.code, r.ap, r.adp)).join("") +
+    line("All shown campuses", "", campKey, T.ap, T.adp, true) + "</tbody>";
+  $("jt-count").textContent = `${codes.length} job title${codes.length === 1 ? "" : "s"} · ${camps.length} campuses`;
+  $("jt-legend").textContent = "Bar = active in ADP; black tick = approved slots. A bar past the tick means more staff than approved.";
+}
+
+// Detail lists for the job-title section. camp is a code, "ALL", or codes joined by "+"
+function groupRecords(metric, camp, codes) {
+  const cs = new Set(codes.split(",")), all = campusCodes();
+  const inC = c => camp === "ALL" ? all.has(c) : camp.split("+").includes(c);
+  return metric === "approved"
+    ? REPORT.records.filter(r => r.source !== "ADP" && inC(r.campus_code) && cs.has(r.fte_job_code))
+    : REPORT.records.filter(r => r.adp_status === "Active" && inC(r.adp_location_code) && cs.has(r.adp_job_code));
+}
+function groupLabel(camp, codes) {
+  const where = camp === "ALL" ? "all campuses" : camp.includes("+") ? "selected campuses" : campusName(camp);
+  const v = $("jt-title").value, grp = TITLE_GROUPS.find(([k]) => k === v);
+  const what = codes.includes(",") ? (grp ? grp[1] : "All job titles") : codes;
+  return `${what} — ${where}`;
+}
+
 /* ---------------------------------------------------------------- details panel */
 
 const modal = { kind: null, rows: [], title: "" };
@@ -411,6 +538,21 @@ function openDetail(key) {
       modal.title = a === "adp" ? `Active in ADP as ${job} — ${campusName(code)}` : `${job} at ${campusName(code)} without an approved slot`;
     }
     modal.sub = `${t.job_title || ""}: ${t.approved ?? 0} approved, ${t.adp_active ?? 0} active in ADP.`;
+  }
+  if (kind === "g") {
+    const [, metric, camp, codes] = key.split(":");
+    modal.kind = "people";
+    modal.rows = groupRecords(metric, camp, codes);
+    modal.title = `${metric === "approved" ? "Approved slots" : "Active in ADP"}: ${groupLabel(camp, codes)}`;
+    modal.sub = metric === "approved" ? "FTE list rows for these job titles, with what ADP shows for each person."
+      : "Staff whose ADP Position tab has this campus and job title.";
+  } else if (kind === "gt") {
+    const [, camp, codes] = key.split(":");
+    const cs = new Set(codes.split(",")), all = campusCodes();
+    modal.kind = "titles";
+    modal.rows = REPORT.title_counts.filter(t => cs.has(t.job_code) && (camp === "ALL" ? all.has(t.campus_code) : camp.split("+").includes(t.campus_code)));
+    modal.title = `Approved vs. ADP by job title: ${groupLabel(camp, codes)}`;
+    modal.sub = "Click a number to see the people behind it.";
   }
   $("m-q").value = "";
   renderModal();
@@ -474,7 +616,7 @@ async function runCrosscheck() {
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || r.statusText);
     REPORT = data;
-    renderMeta(); populateCampusFilter(); renderAll();
+    renderMeta(); populateCampusFilter(); populateTitleFilter(); renderAll();
     const after = REPORT.campuses.reduce((a, c) => a + c.overhire, 0);
     toast(`Cross-check complete — ADP pulled ${REPORT.adp_pulled_at}. Overhire ${before} → ${after}.`, "ok");
     $("run-msg").textContent = "";
@@ -494,7 +636,7 @@ function toast(msg, kind) {
 
 /* ---------------------------------------------------------------- wiring */
 
-function renderAll() { renderKpis(); renderCampus(); renderOver(); renderPeople(); }
+function renderAll() { renderKpis(); renderCampus(); renderOver(); renderJobTitles(); renderPeople(); }
 
 function populateCampusFilter() {
   $("f-campus").innerHTML = `<option value="ALL">All campuses</option>` +
@@ -510,6 +652,8 @@ function init() {
   $("f-status").onchange = e => { state.status = e.target.value; renderAll(); };
   $("q").oninput = e => { state.q = e.target.value; renderPeople(); };
   $("over-only").onchange = renderOver;
+  populateTitleFilter();
+  ["jt-title", "jt-region", "jt-view"].forEach(id => $(id).onchange = renderJobTitles);
   $("export").onclick = () => downloadCsv(`fte_adp_crosscheck_${state.campus}_${state.status}.csv`, filteredPeople(), PEOPLE_CSV);
   $("m-q").oninput = renderModal;
   $("m-close").onclick = closeModal;
