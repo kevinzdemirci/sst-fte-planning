@@ -3,3 +3,10 @@
 __pycache__/
 *.log
 .system_generated/
+.env
+certs/
+*.key
+*.pem
+*.pfx
+*.textClipping
+FTE Planning.md/API ADP.npv/
